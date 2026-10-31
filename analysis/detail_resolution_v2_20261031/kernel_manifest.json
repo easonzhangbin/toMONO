@@ -1,0 +1,150 @@
+{
+  "schema": "tomono.detail_resolution.kernel_manifest.v2",
+  "freeze_utc": "2026-10-31T02:30:55.708002+00:00",
+  "status": "frozen before any new controlled quality score; no parameter search",
+  "implementation_kind": "inspired_not_reproduction",
+  "methods": [
+    "g_ar_reliable",
+    "g_ar_noiseaware",
+    "spectral_local_guard"
+  ],
+  "interface": "reconstruct(samples,pattern,target,method,noise_sigma=0)->float32 linear plane; reconstruct_tiled(...,tile_size=512)",
+  "scope": {
+    "AR": "new G-only directional-polynomial AR mechanism; identical independent same-colour bounded cubic fallback for R/B",
+    "spectral": "same independently derived geometry FIR as first study plus new local measured-range/noise limiter",
+    "previous_study": "read-only; spectral Python helper copied into independent file, not imported or modified",
+    "RAW": "none opened; no DNG exports; any future RAW work must use one independent process per source because of first-study S1H tail issue"
+  },
+  "input_contract": {
+    "units": "pre-normalized linear using each selected phase actual black and white",
+    "dtype": "floating 2D CFA, minimum8x8",
+    "patterns": [
+      "RGGB",
+      "BGGR",
+      "GRBG",
+      "GBRG"
+    ],
+    "target": "0/1/2 or R/G/B",
+    "other_colour": "never read/validated; may contain NaN",
+    "measurements": "hard float32 input representation restored exactly",
+    "negative_and_above_white": "allowed; no global exposure/white/tone/quantization changes"
+  },
+  "noise_sigma": {
+    "units": "normalized calibration standard deviation",
+    "zero_semantics": "no external noise variance; no automatic estimator",
+    "positive_semantics": "one declared calibration value for the acquisition setting, not a per-pixel truth oracle",
+    "reliable_AR": "ignored",
+    "noiseaware_AR": "used only if sigma>0; exactly equals reliable_AR for sigma0",
+    "spectral_guard": "used only if sigma>0 for missing-site noise reliability",
+    "benchmark_agreement": "new diagnostics use fixed reference18%-gray sigma=sqrt(shot*0.18+read^2) per acquisition noise setting; clean/old-regression/ablation sigma0",
+    "theory_assumption": "noise gain coefficients assume independent homoscedastic source samples; reference-gray sigma approximates heteroscedastic shot noise and reflection reuses samples near boundaries"
+  },
+  "common": {
+    "boundary": "parity-preserving reflection period2*(size-1)",
+    "flat": "exact float32 constant shortcut",
+    "tile_core": 512,
+    "tile_halo": 48,
+    "output_clipping": "no global clamp; declared same-colour local range only",
+    "photometric_transform": "none",
+    "training": "none",
+    "RGB_guidance": "none",
+    "maximum_AR_source_radius": 9
+  },
+  "g_ar_reliable": {
+    "training": "24 selected G centers in radius3 square about missing site, with (dy+dx) odd",
+    "spatial_weight": "1/(1+0.25*(dy^2+dx^2))",
+    "low_scale_direction_stencil": "horizontal/vertical selected offsets[-6,-2,+2,+6], coefficients[-1,9,9,-1]/16",
+    "fine_scale_direction_stencil": "horizontal/vertical selected offsets[-3,-1,+1,+3], same coefficients",
+    "model": "base=(qH+qV)/2; d=qV-qH; r=measured_center-base; sum-one symmetric H/V mixture",
+    "ridge": "lambda=0.01*sum(w*d^2)+sum(w)*1e-12",
+    "delta": "clip(sum(w*d*r)/(sum(w*d^2)+lambda),-0.5,0.5)",
+    "PRESS_proxy": "unclipped-fit residual/(max(1-w*d^2/(sum(w*d^2)+lambda),0.05)); frozen local lambda and design-row deletion",
+    "reliability": "clip((weighted_base_error-weighted_PRESS_proxy_error)/(weighted_base_error+sum(w)*1e-14),0,1)",
+    "alpha": "clip(0.5+reliability*delta,0,1); output=(1-alpha)*qH+alpha*qV",
+    "bound": "min/max of 8 selected fine-scale H/V stencil samples",
+    "PRESS_caveat": "Overlapping source supports and data-dependent features mean this is a stabilized local reliability surrogate, not independent source-sample held-out validation."
+  },
+  "g_ar_noiseaware": {
+    "base": "same predictive AR; sigma0 exactly same code path as reliable_AR",
+    "linear_component": "L=(near_left+near_right)/2",
+    "curvature_component": "K=(near_left+near_right-far_left-far_right)/16",
+    "shared_HV_beta": "clip((weighted_mean(0.5*(KH^2+KV^2))-sigma^2/64)/(weighted_mean(0.5*(KH^2+KV^2))+1e-14),0,1)",
+    "direction_candidate": "q=L+beta*K at both training and interpolation scales",
+    "noise_gain_q": "sigma^2*(1/2+beta/8+beta^2/64)",
+    "noise_gain_direction_difference": "2*noise_gain_q",
+    "extra_reliability": "clip((weighted_mean(d^2)-noise_gain_direction_difference)/(weighted_mean(d^2)+1e-14),0,1)",
+    "combination": "multiply PRESS reliability by extra_reliability; never invert a noise-debiased near-zero covariance",
+    "noise_coefficients_verified": {
+      "Var_L_over_sigma2": 0.5,
+      "Var_K_over_sigma2": 0.015625,
+      "Cov_LK_over_sigma2": 0.0625,
+      "beta1_Var_d_over_sigma2": 1.28125,
+      "beta1_Var_r_over_sigma2": 1.3203125
+    },
+    "bound": "same8 selected samples as reliable_AR; actual measurements never denoised"
+  },
+  "RB_AR_fallback": {
+    "claim": "common independent regular-grid bounded cubic fallback, no new R/B autoregressive method",
+    "stencil": "separable[-1,9,9,-1]/16, 4 points on one missing axis or16 when both axes missing",
+    "bound": "range of the actual selected4/16 stencil samples",
+    "sigma": "ignored"
+  },
+  "spectral_local_guard": {
+    "geometry_G": "diamond |fx|+|fy|=0.5 cycles/fullpixel; raised-cosine2->0 transition[0.46,0.54]",
+    "geometry_RB": "axis rectangle |faxis|=0.25; separable raised-cosine2->0 transition[0.23,0.27]",
+    "frequency_design_side": 512,
+    "spatial_radius": 48,
+    "spatial_window": "separable1 to radius32 then halfcosine to0 at48",
+    "cardinality": "observed-lattice offsets zero except center1; each CFA phase DC normalized after compact truncation",
+    "execution": "FFT valid convolution with parity-preserving reflection; finite97x97 FIR, never whole-frame FFT",
+    "local_range": "range of selected source sites in radius3 square for G or radius4 forR/B; project only missing spectral predictions",
+    "known_noise_reliability": "clip((local_selected_variance-sigma^2)/(local_selected_variance+1e-14),0,1)",
+    "low_SNR_pilot": "G4-neighbour selected mean; R/B common bounded cubic",
+    "positive_sigma_output": "pilot+reliability*(range_bounded_spectral-pilot), again project local range",
+    "sigma0_output": "range_bounded_spectral only",
+    "limitation": "Range guarantees remove step over/undershoot but also suppress legitimate extrema absent from measured local samples. Ringing that stays inside a nonconstant local range and aliasing may survive."
+  },
+  "references": [
+    {
+      "title": "Li and Orchard, New Edge-Directed Interpolation (2001)",
+      "url": "https://doi.org/10.1109/83.951537",
+      "role": "coarse/fine covariance geometric prior; not reproduced"
+    },
+    {
+      "title": "Zhang and Wu, Edge-guided directional filtering and data fusion (2006)",
+      "url": "https://doi.org/10.1109/TIP.2006.877407",
+      "role": "directional prediction/statistical fusion inspiration; not reproduced"
+    },
+    {
+      "title": "Allen, Variable selection, data augmentation and prediction (1974)",
+      "url": "https://doi.org/10.1080/00401706.1974.10489157",
+      "fulltext": "https://stat.cmu.edu/technometrics/70-79/VOL-16-01/v1601125.pdf",
+      "role": "PRESS idea; only stabilized fixed-design row-deletion algebra is borrowed"
+    },
+    {
+      "title": "Golub, Heath and Wahba, Generalized Cross-Validation (1979)",
+      "url": "https://doi.org/10.1080/00401706.1979.10489751",
+      "role": "linear ridge hat-matrix prediction-error framework; no parameter search/GCV algorithm reproduction"
+    },
+    {
+      "title": "Hyman, Accurate Monotonicity Preserving Cubic Interpolation (1983)",
+      "url": "https://doi.org/10.1137/0904045",
+      "role": "local shape/range preservation principle only; our two-dimensional range limiter is not Hyman algorithm"
+    }
+  ],
+  "limitations": [
+    "No recovery or uniqueness guarantee beyond the selected-colour sample lattice Nyquist region.",
+    "Coarse/fine direction invariance is a prior; periodic textures can have different coarse-scale aliases.",
+    "AR is H/V symmetric and can miss arbitrary oblique geometry, corners, and asymmetric fine structures.",
+    "Local ranges can clip legitimate unsampled extrema; hard observed noise/defects are preserved.",
+    "Known reference-gray calibration sigma is an approximation for signal-dependent shot noise, not an optimal per-pixel model.",
+    "PRESS proxy uses correlated, overlapping samples and is not a statistical validation certificate.",
+    "No test scores were observed and no tuning sweep/training was performed before freeze."
+  ],
+  "self_check_results": "self_check_results.json",
+  "file_sha256": {
+    "kernels.py": "9af5b8d602366ad0649eb26ac791f6ceb480e1b0b4248707a27ddef26b8ecbf9",
+    "detail_native.c": "6ea37cd5f99b1239e220717420e2759f7543efa57137a65708877e1f4ee1341a",
+    "self_check.py": "98b95a21a27a22ae68acba441e9b85e6756d7d950b589f6a0669e5abf6a990bf"
+  }
+}

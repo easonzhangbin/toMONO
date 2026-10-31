@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "detail_mode": "spectral",
+  "response_mode": "narrow_red",
+  "response_exposure": 0.0,
+  "green_mode": "off",
+  "preserve_capture": false,
+  "preserve_description": false
+}

@@ -1,0 +1,6 @@
+# Versions used for the Beta 8 source snapshot. Research/plotting tools are separate.
+numpy==2.5.4
+rawpy==0.27.1
+tifffile==2026.10.15
+imagecodecs==2026.10.10
+lensfunpy==1.18.0

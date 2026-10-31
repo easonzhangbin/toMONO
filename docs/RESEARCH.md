@@ -1,0 +1,579 @@
+# 技术与研究出处
+
+此页由应用内 `ResearchReferences.json` 整理。历史实验条目用于公开研究脉络，不表示对应实现、权重或训练数据已随此仓库发布。产品源码为 Beta 8 快照；依赖实际版本以安装清单和构建记录为准。
+
+## 当前三种细节核
+
+- C01：`portable/detail_reconstruction.py` 中的同色有限支撑频域重建。
+- D11：同文件与 `portable/src/detail_native.c` 中的局部限幅。
+- D10：`detail_native.c` 中绿色方向可靠性预测；红蓝有界三次回退。
+- 冻结参考源码位于 `analysis/detail_resolution_20261031` 与 `analysis/detail_resolution_v2_20261031`。
+
+下面的论文不是这些实现的质量认证。有关采用边界，以每项说明为准。
+
+## 已集成组件或实现
+
+### Python 运行环境
+
+- authors：Python Software Foundation
+- version：3.12.14
+- function：运行本地读取、转换、预览与元数据处理后台。
+- relationship：使用原项目提供的运行环境。
+- materialStatus：随软件打包的本地运行组件；不需要联网执行照片转换。
+- [原出处](https://www.python.org/)
+
+### rawpy
+
+- authors：rawpy 项目贡献者
+- version：0.27.1
+- function：向本地转换程序提供 LibRaw 的相机 RAW 读取接口。
+- relationship：使用原项目库接口，不是 toMONO 自研 RAW 格式解码器。
+- materialStatus：随软件使用；具体相机与拍摄模式仍受内置解码库实际能力影响。
+- [原出处](https://letmaik.github.io/rawpy/)
+- [代码或实现](https://github.com/letmaik/rawpy)
+
+### LibRaw
+
+- authors：LibRaw LLC 与贡献者
+- version：0.22.1
+- function：读取传感器采样、CFA 与黑白电平；复杂布局必要时进入明确标注的线性重建路径。
+- relationship：使用原库；直接 CFA 与库内线性回退分别记录。
+- materialStatus：随 rawpy 使用；兼容能力不依赖提交样片解锁。
+- [原出处](https://www.libraw.org/)
+- [代码或实现](https://github.com/LibRaw/LibRaw)
+
+### NumPy
+
+- authors：NumPy Developers
+- version：2.5.4
+- function：数值数组、线性响应混合与直方图统计。
+- relationship：使用原项目的数值库。
+- materialStatus：随软件使用；统计不等同外部显影软件的色调处理。
+- [原出处](https://numpy.org/)
+- [代码或实现](https://github.com/numpy/numpy)
+
+### tifffile
+
+- authors：Christoph Gohlke 与贡献者
+- version：2026.10.15
+- function：读取和写入 TIFF/DNG 容器及其标签。
+- relationship：使用原项目库；toMONO 决定输出数据、标签与校验流程。
+- materialStatus：随软件使用。
+- [原出处](https://github.com/cgohlke/tifffile)
+
+### imagecodecs
+
+- authors：Christoph Gohlke 与贡献者
+- version：2026.10.10
+- function：图像编码、解码与预览数据处理。
+- relationship：使用原项目及随附的编码组件。
+- materialStatus：随软件使用；组件原文说明另见“组件与许可”。
+- [原出处](https://github.com/cgohlke/imagecodecs)
+
+### ExifTool
+
+- authors：Phil Harvey
+- version：13.53
+- function：读取、写入和核对标准拍摄元数据。
+- relationship：调用原工具，不把原图的全部显影设置直接复制到输出。
+- materialStatus：随软件使用；原图保持不变。
+- [原出处](https://exiftool.org/)
+- [代码或实现](https://github.com/exiftool/exiftool)
+
+### Lensfun
+
+- authors：Lensfun 项目贡献者
+- version：0.3.4
+- function：查询镜头校准并计算可选畸变、暗角映射。
+- relationship：使用原库与其校准模型；额外校正默认关闭。
+- materialStatus：随软件使用；校准是否适合实际镜头与拍摄条件需独立判断。
+- [原出处](https://lensfun.github.io/)
+- [代码或实现](https://github.com/lensfun/lensfun)
+
+### Lensfun 镜头校准数据库
+
+- authors：Lensfun 数据库贡献者
+- function：提供可搜索镜头型号与已有校准条目。
+- relationship：使用数据库快照；不声称每只镜头都有完整畸变、色差与暗角标定。
+- materialStatus：随软件打包数据库；处理记录保存所用配置和数据库摘要。
+- [原出处](https://lensfun.github.io/)
+- [代码或实现](https://github.com/lensfun/lensfun/tree/master/data/db)
+
+### SwiftUI / AppKit 原生界面
+
+- authors：Apple
+- function：macOS 窗口、交互、原生材质、图像显示与辅助功能。
+- relationship：使用系统框架；材质效果随系统版本及辅助功能设置适配。
+- materialStatus：调用用户系统提供的框架，不是 Python 绘制的网页界面。
+- [原出处](https://developer.apple.com/documentation/swiftui)
+
+### Digital Negative（DNG）格式
+
+- authors：Adobe
+- function：保存可继续显影的单通道 RAW 采样、黑白电平、方向、裁切与来源信息。
+- relationship：依据格式组织输出；格式兼容与外观匹配分别验证。
+- materialStatus：使用 DNG 容器和标签，不表示把 Adobe 显影器嵌入软件。
+- [原出处](https://helpx.adobe.com/camera-raw/digital-negative.html)
+
+### ICC 色彩管理
+
+- authors：International Color Consortium
+- function：为概览、细节图和内嵌预览标明显示响应。
+- relationship：遵循 ICC 配置文件机制；toMONO 创建自己的显示响应配置。
+- materialStatus：预览 ICC 不等于所有 RAW 显影器的默认色调曲线。
+- [原出处](https://www.color.org/icc_specs2.xalter)
+
+### toMONO 单通道重建与响应实现
+
+- authors：toMONO
+- year：2026
+- version：1.0 Beta 8 build 9
+- function：在直接2×2 RGB Bayer上以C01频域精细为新默认，提供D11频域限幅和D10方向自适应；逐目标色重建后执行选定响应混合与显式EV，保持线性单通道DNG。普通路径按用户选择执行绿色差异校正，并按参与响应的目标颜色修复坏点；strict仅修所选颜色并跳过绿色差异校正。
+- relationship：toMONO当前集成的独立确定性实现。三细节核本身只读取各自目标色；普通流程中的可选绿色校正另有明确输入依赖，不能把整个普通流程称为strict输入隔离。频域核为采样格独立推导，方向/限幅核为原则启发，不是NEDI、LMMSE、GCV、Hyman或神经网络的完整复现。
+- materialStatus：2026-10-31，1.0 Beta 8 build 9：spectral=C01默认，spectral_guard=D11、directional=D10可选；普通G、RGB mix各参与目标色与strict窄带共用所选细节核，σ=0、无自动估噪。逐相位float64归一化，在选定坏点/绿色校正后保留目标观测，再混合、显式EV与一次容器舍入；可选镜头处理、修复与曝光仍可改变数值。unsupported普通输入明确记录legacy回退，strict拒绝不支持域。无版本/version1缺细节字段保留legacy行为，version2缺字段使用spectral。历史插值选项只控制legacy；线性DN面积平均概览与预览外观适配继续独立，不用显示曲线掩盖格点伪影。
+
+### toMONO 频域精细（C01，spectral；当前默认）
+
+- authors：toMONO 本地独立实现
+- year：2026
+- version：1.0 Beta 8 build 9
+- function：按实际同色采样格以97×97紧支撑FIR重建缺失位：G使用quincunx菱形频带，R/B使用矩形频带；有限核以FFT分块求值，反射边界保留CFA相位，缺测相位分别作DC归一化。
+- relationship：由采样格与倒格频谱独立推导的toMONO确定性实现；不是某篇RGB频域去马赛克论文的复现，也没有光学PSF反卷积、生成式超分或跨色引导。
+- materialStatus：2026-10-31集成于1.0 Beta 8 build 9，成为新预设默认。普通G、RGB mix每个参与色及strict均可用；核本身只用目标色，产品σ=0、不估噪。紧支撑截断、频带滚降和反射会影响边界；保留带宽可能伴随振铃、过冲、噪声放大及带外alias。硬保留实测位不能修复输入已有alias，不能据频带内合成成绩声称全场景更清晰。
+
+### toMONO 频域限幅（D11，spectral_guard）
+
+- authors：toMONO 本地独立实现
+- year：2026
+- version：1.0 Beta 8 build 9
+- function：在同色频域重建后，以G半径3、R/B半径4的实际目标色观测邻域min/max限制缺失位预测，不裁切或替换核内实测位；本版σ=0，仅使用冻结范围限制。
+- relationship：toMONO独立二维局部范围投影，借用保持局部形状/范围原则；不是Hyman一维Hermite导数约束算法，不保证二维单调、仿射精确或无带内振铃。
+- materialStatus：2026-10-31集成于1.0 Beta 8 build 9，作为可选细节模式，普通各参与色与strict共用。局部限幅可降低部分边缘过冲，也会压制采样点中未出现的真实极值、改变纹理对比和相位响应；含噪观测范围不等于clean真值范围，相位偏差与范围内alias仍可能存在。固定σ=0，不包括研究中显式标定σ的收缩实验，不作自动降噪或全面画质提升承诺。
+
+### toMONO 方向自适应（D10，directional）
+
+- authors：toMONO 本地独立实现
+- year：2026
+- version：1.0 Beta 8 build 9
+- function：G通道用同色粗尺度横/竖多项式预测，拟合一参数带ridge的H/V混合，以稳定化PRESS删行代理控制方向权重，再迁移到细格并限制局部范围；R/B采用共同有界cubic。
+- relationship：由粗细尺度方向统计迁移、方向候选融合和固定设计ridge删行代数启发的独立改写，不是四预测器NEDI、原文LMMSE、真实source-LOO、GCV选参或论文完整复现。
+- materialStatus：2026-10-31集成于1.0 Beta 8 build 9，普通各参与色与strict可选；产品只用σ=0，不自动估噪，也不包含研究版noise-aware分支。PRESS代理未真正删去原RAW样本，重叠特征、beta及lambda未重新估计，不能称独立验证或统计置信度。G在部分边缘/正弦有收益，也发现周期织纹、斜向结构和低信噪比退化；R/B没有新AR解析力主张。有界处理不保证恢复真实未采样纹理。
+
+### toMONO Camera Raw 初始外观适配
+
+- authors：toMONO；元数据由 Adobe Camera Raw 解释
+- year：2026
+- function：把测量得到的初始显影曲线与中性参数写入 DNG，使 ACR 初始明暗接近 toMONO 预览。
+- relationship：toMONO 自行测量的外观适配，不采用某款实体单色相机的灰度风格。
+- materialStatus：ACR 18.7 已有实测；不改变线性 RAW，重置显影会清除曲线，不承诺所有软件或版本完全一致。
+- [原出处](https://developer.adobe.com/xmp/docs/XMPNamespaces/crs/)
+
+### toMONO 纯同色窄带重建与路径隔离
+
+- authors：toMONO 本地独立实现
+- year：2026
+- version：1.0 Beta 8 build 9；detail_mode=spectral|spectral_guard|directional|legacy
+- function：为已知红、绿或蓝窄带从所选CFA同色采样重建完整有效区单通道DNG；当前默认C01频域精细，可选D11频域限幅或D10方向自适应，并仅按显式目标坏点表修复所选颜色。
+- relationship：自研确定性算子和严格处理路径；不读取其他颜色作插值、方向或局部范围引导，跳过全部绿色差异校正。D10在R/B上使用共同有界cubic回退，不是新的R/B自回归方法。数字同色隔离不等于物理光谱解混。
+- materialStatus：当前（2026-10-31，1.0 Beta 8 build 9）：仅直接2×2 RGB Bayer，所选三细节核σ=0、无自动估噪、白平衡、曝光或直方图拉齐；显式EV按预设保留。目标采样按实际逐相位黑白电平归一化，修复后观测在混合前保留，最后映射公共容器并舍入；可选目标坏点、显式EV和镜头处理可能改变数值，不声称源DN全部原样或新增真实解析力。其他CFA、原生单色、LibRaw线性回退及未验证DNG处理域会拒绝。旧cubic/linear只用于legacy；无版本/version1缺detail_mode迁移legacy，version2缺字段取spectral。历史验证（Beta7，2026-10-31登记；不代表三种新核已复现相同测试）：已导出DC-S1H两个RGB三拍组×两种插值，共12份全尺寸DNG，独立LibRaw/结构审计全部通过，6源SHA保持。0 EV、无额外坏点与镜头处理时，两种输出合计385,890,304个目标位置符合归一化与公共容器舍入公式，差异0；相同来源在不同插值输出中重复计数，不代表新增独立测量。实际画面8018×12032、DefaultCrop12000×8000、Orientation1；没有真实场景逐像素真值，不能据此声称插值画质或所有机型已验收。
+
+## 历史实验
+
+### 多方向同色置信融合（multidir）
+
+- authors：toMONO 本地研究
+- year：2026
+- function：根据合法的同色方向候选和局部变化估算缺失采样；保留可信实测位置。
+- relationship：受方向误差融合思想启发的独立启发式实现；不是 LMMSE 原论文复现。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已在合成和实拍研究集合实测。斜边与噪声方面存在收益，也发现细线、高频纹理代价；未替换默认核心。
+
+### 同色残差修正（residual）
+
+- authors：toMONO 本地研究
+- year：2026
+- function：在初估基础上用同色实测残差作有限修正，检查细节与过冲的代价。
+- relationship：受 RI 思想启发的独立实现；没有照搬跨颜色引导或声明复现论文成绩。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已实测；部分边缘改善不代表所有纹理更好，未默认启用。
+
+### 采样域软降噪后重建（pre_soft）
+
+- authors：toMONO 本地研究
+- year：2026
+- function：先在目标颜色采样格点作保守软化，再执行同色重建；允许调整实测值。
+- relationship：用于比较处理顺序的独立轻量候选；不是联合 CNN、BM3D 或论文完整求解器。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已实测；噪声参数与强度明确记录，没有用固定 1.5 倍噪声代替实际估计。未默认启用。
+
+### 重建后软降噪（post_soft）
+
+- authors：toMONO 本地研究
+- year：2026
+- function：先完成同色重建，再在相同物理邻域作保守软化，观察细节、噪声与空间相关性。
+- relationship：与 pre_soft 配对的独立顺序实验；不是原论文中任何完整组合方法的复现。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已实测；降低方差不等于颗粒更自然，当前未完整传播插值噪声协方差。未默认启用。
+
+### MMNet 公开预训练模型本地推理对照
+
+- authors：Kokkinos、Lefkimmiatis；toMONO 本地评测
+- year：2026
+- version：官方提交 3ba7b86837b34b20588a0de956cdff21b711e5c2；20次迭代
+- function：对带观测约束的迭代网络开展本地推理，比较其边缘、噪声、光谱与运行成本。
+- relationship：依据官方公开网络与权重进行研究推理；没有训练或微调，不把独立适配层说成原论文新模型。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：固定官方 noisy 权重，SHA256：2a5c605b75545e3afddf40d2e22ba6aff1617d1054c03eea1e9a3ba54ebd4ab9。以20次迭代完成3张全分辨率RAW、固定模拟与自然彩色派生测试；没有训练或微调，尚未整合到默认引擎。
+- [原出处](https://github.com/cig-skoltech/deep_demosaick)
+- [代码或实现](https://github.com/cig-skoltech/deep_demosaick/tree/3ba7b86837b34b20588a0de956cdff21b711e5c2)
+
+### G1/G2 增益与偏置估计原型
+
+- authors：toMONO 本地研究
+- year：2026
+- function：仅使用两类绿色的同色采样和低梯度可靠区域，稳健估计相位常数增益/偏置；有独立标定依据时作对称、均值受约束的候选校正，非绿色不变。
+- relationship：toMONO 独立实现的校准原型，与当前阈值/中值校正不同，不是 Foi 原论文复现；所引论文仅提供 RAW 噪声与标定背景。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：10项独立合成测试通过；18张实拍均因证据不足或偏差过小等原因保守跳过，原采样不变。单张图的真实相位纹理可能伪装成机身偏差，不能把统计置信当成独立物理标定。本原型未整合到默认引擎。
+
+### MMNet 结果的实测点回投影对照（A09）
+
+- authors：toMONO 本地研究；固定 MMNet 预测为输入
+- year：2026
+- function：保留 A08 对缺失位置的预测，将已测位置恢复为原始归一化观测；本轮3张全幅 A09 DNG 恢复实测绿色，不重新调用网络。
+- relationship：toMONO 独立增加的后处理对照，不是原 MMNet 的新模型、训练结果或论文原方法复现。用于区分观测保真与联合降噪的取舍。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已做全幅及数字参考对照，没有训练或微调。回投影会恢复观测噪声，可能增加 CFA 周期残差或相位间噪声不均；缺失位置预测中的误差、剪裁及跨颜色先验仍然保留。未整合到默认引擎。
+
+### PyTorch / MPS 本地研究运行时
+
+- authors：PyTorch Contributors；Apple MPS
+- version：2.15.0
+- function：运行公开MMNet预训练推理与数值验证。
+- relationship：使用原运行库；研究适配层单独记录，不作为自研神经网络框架。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：安装在独立研究环境，不随本软件默认转换后台打包。
+- [原出处](https://pytorch.org/)
+- [代码或实现](https://github.com/pytorch/pytorch)
+
+### 官方 BM3D 前后顺序研究对照
+
+- authors：Ymir Mäkinen；Lucio Azzari；Alessandro Foi；toMONO实验适配
+- year：2026
+- version：bm3d4.0.3 / bm4d4.2.5
+- function：真实官方BM3D用于同色采样预降噪及重建后降噪的顺序比较。
+- relationship：调用官方原生Apple Silicon实现；本地单通道顺序改编，不是原文完整RGB管线复现。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已完成固定合成小样和两张512局部实测；没有运行全幅BM3D、没有替换默认引擎。
+- [原出处](https://webpages.tuni.fi/foi/GCF-BM3D/)
+- [代码或实现](https://pypi.org/project/bm3d/)
+
+### A Mathematical Analysis and Implementation of Residual Interpolation Demosaicking Algorithms
+
+- authors：Qiyu Jin, Yu Guo, Jean-Michel Morel, Gabriele Facciolo
+- year：2021
+- version：IPOL11:234-283; source1.0, requirements revision2021-11-20
+- function：官方RI/ARI跨色重建参考实现，用于独立数字与局部RAW对照。
+- relationship：实际调用官方RI/ARI原数学源码，经归一化接口用于冻结数字测试与局部RAW对照；是原参考实现的适配，不是V1自研同色residual的别名。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已实测；保留上游裁剪与现代依赖下的常量/边界不稳定记录。只提供独立局部RAW结果，没有证明与全幅分块等价，未默认集成。
+- [原出处](https://www.ipol.im/pub/art/2021/358/)
+- [代码或实现](https://www.ipol.im/pub/art/2021/358/residual_demosaicing_ipol_python39.zip)
+
+### toMONO V2 自研单目标通道残差CNN
+
+- authors：toMONO 本地研究实现
+- year：2026
+- version：own_same_colour_residual_cnn_v1
+- function：自有同色稀疏初估残差网络，提供硬保真与含噪微调研究输出。
+- relationship：自研六输入、八个3x3卷积；同色稀疏采样/掩码/归一化初估/噪声特征；不读取其他通道数据。借鉴残差学习与测量约束，不是任何已有论文的新版本或原模型权重。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：2026-10-31勘误：真实RAW研究输出已发现2×2相位/棋盘格伪影，涉及同色CNN与RGB引导CNN候选（包括B10、B20/B21）。原数字测试与训练记录保留，但这些模型尚未通过真实RAW画质验收，不应默认整合；本次没有新增训练。 已实际完成自有训练；官方train200更新权重、val100选模。完成步数和选中步数分别登记，未使用外部预训练权重，未替换默认产品核心。 限制：hard仅估缺失点；soft从hard最佳微调，允许改动噪声测量点。二者是备选输出，不是推理时串联的原论文两CNN。BSDS域/噪声未做相机实测标定。 实际训练：hard_clean完成2048步，val选中1536步；soft_noise完成4096步，val选中1280步。权重与训练数据不随本App打包，研究DNG独立交付。
+
+### toMONO V2 同色三次与方向保护（cubic_guard）
+
+- authors：toMONO 本地独立实现
+- year：2026
+- version：CPU research v2; fixed parameters in classical_v2_sources.json
+- function：高阶同色三次估算，按方向、单调性与噪声门限保护局部边缘。
+- relationship：以高阶同色三次为主体，仅在方向/单调/噪声门限满足时融合边缘估计；独立启发式设计，不是LMMSE论文完整复现。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已实现并用于V2冻结研究对照；硬保留目标实测，未集成产品默认核心。 限制：方向保护仍可能误判；R/B使用有界可分离三次，不能宣传新增方向模型或通用质量提升。
+
+### toMONO V2 硬观测约束曲率迭代（biharmonic_hard）
+
+- authors：toMONO 本地独立设计与推导
+- year：2026
+- version：24-step damped Jacobi, damping0.4
+- function：保持实测点的有限步曲率能量迭代研究。
+- relationship：本项目定义sum((discrete Laplacian x)^2)目标并保持目标实测点，使用有限步迭代近似；不借用某篇论文名义宣称完整复现。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：已实现、参数冻结并用于独立测试；没有替换产品默认引擎。 限制：24步不等于精确收敛；可能平滑细节或振铃，不减少被硬保留的原始测量噪声。
+
+### toMONO V2 自研同色三次初估/空洞残差CNN
+
+- authors：toMONO 本地研究实现与训练
+- year：2026
+- version：own_same_colour_cubic_dilated_residual_v2
+- function：自有同色三次初估与扩感受野网络，分别输出硬保真/含噪微调结果。
+- relationship：与首轮权重隔离的自有训练family；固定同色三次初估、8层混合空洞卷积、硬/软保真分阶段。不是已发表RI、ARI或双CNN模型的原算法复现。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：2026-10-31勘误：真实RAW研究输出已发现2×2相位/棋盘格伪影，涉及同色CNN与RGB引导CNN候选（包括B10、B20/B21）。原数字测试与训练记录保留，但这些模型尚未通过真实RAW画质验收，不应默认整合；本次没有新增训练。 已实际完成自有训练；官方train200更新权重、val100选模。完成步数和选中步数分别登记，未使用外部预训练权重，未替换默认产品核心。 限制：R/G/B分别只读同色；初估/感受野/训练混合同时改变，不能唯一归因架构。JPEG近似线性、合成噪声不代表相机实测标定。 实际训练：cubic_hard完成4096步，val选中3840步；cubic_soft完成4096步，val选中3840步。权重与训练数据不随本App打包，研究DNG独立交付。
+
+### toMONO V2 自研宽谱RGB引导固定G响应CNN
+
+- authors：toMONO 本地研究实现与训练
+- year：2026
+- version：own_rgb_guided_fixed_green_residual_v3
+- function：自有宽谱RGB引导模型，输出固定G目标；用于研究跨色信息收益与风险。
+- relationship：自有10输入/8卷积残差网络，利用R/B结构估算缺失G，输出目标固定G；借鉴跨色信息与测量约束问题，不复制RI/ARI/MMNet架构、代码或外部预训练权重。
+- materialStatus：历史研究登记（2026-10-31；不随本轮细节核整合）：2026-10-31勘误：真实RAW研究输出已发现2×2相位/棋盘格伪影，涉及同色CNN与RGB引导CNN候选（包括B10、B20/B21）。原数字测试与训练记录保留，但这些模型尚未通过真实RAW画质验收，不应默认整合；本次没有新增训练。 已实际完成自有训练；官方train200更新权重、val100选模。完成步数和选中步数分别登记，未使用外部预训练权重，未替换默认产品核心。 限制：只用于宽谱光照的研究候选，不支持R/B目标或窄带默认。hard仅保证已测G不改；缺失G会随R/B变化，不能保证跨机型/异常光谱的物理响应保真。无白平衡、自动曝光或直方图拉齐。 实际训练：rgb_guided_hard完成4096步，val选中3328步；rgb_guided_soft完成4096步，val选中2816步。权重与训练数据不随本App打包，研究DNG独立交付。
+
+## 研究参考
+
+### Color Demosaicking via Directional Linear Minimum Mean-Square Error Estimation
+
+- authors：Lei Zhang；Xiaolin Wu
+- year：2005
+- function：方向估计误差统计与候选融合，供同色方向研究参考。
+- relationship：仅参考其方法依据；原始跨通道色差假设不能直接套入窄带。
+- materialStatus：论文与 IPOL 实例列为来源，没有把当前 Bicubic 标为该算法。
+- [原出处](https://www4.comp.polyu.edu.hk/~cslzhang/paper/LMMSEdemosaicing.pdf)
+- [代码或实现](https://www.ipol.im/pub/art/2011/g_zwld/)
+
+### Beyond Color Difference: Residual Interpolation for Color Image Demosaicking
+
+- authors：Daisuke Kiku；Yusuke Monno；Masayuki Tanaka；Masatoshi Okutomi
+- year：2016
+- function：用初估与实测的残差改善缺失采样估算。
+- relationship：研究依据；本地 residual 是独立同色候选，不是原作者实现或原文完整复现。
+- materialStatus：未把原作者代码或权重并入默认软件。
+- [原出处](https://www.ok.sc.e.titech.ac.jp/res/DM/TIP_RI.pdf)
+
+### Practical Poissonian-Gaussian Noise Modeling and Fitting for Single-Image Raw-Data
+
+- authors：Alessandro Foi；Mejdi Trimeche；Vladimir Katkovnik；Karen Egiazarian
+- year：2008
+- function：RAW 信号相关噪声、参数估计与剪裁影响，为噪声条件研究提供基础。
+- relationship：参考噪声模型；单图保守估计不等于已经完成每种相机的物理噪声标定。
+- materialStatus：原始软件未作为当前默认依赖接入；实验噪声输入与估计状态分别记录。
+- [原出处](https://researchportal.tuni.fi/en/publications/practical-poissonian-gaussian-noise-modeling-and-fitting-for-sing/)
+- [代码或实现](https://webpages.tuni.fi/foi/sensornoise.html)
+
+### Deep Joint Demosaicking and Denoising
+
+- authors：Michaël Gharbi；Gaurav Chaurasia；Sylvain Paris；Frédo Durand
+- year：2016
+- function：噪声条件输入、CFA 打包与困难样本挖掘，供联合重建研究参考。
+- relationship：仅参考；普通 sRGB 训练和 RGB 输出不能直接代表 toMONO 的线性窄带目标。
+- materialStatus：当前未接入该网络或其权重。作者简化 PyTorch 版本不含完整噪声感知模型，不能混同旧 Caffe 实现。
+- [原出处](https://groups.csail.mit.edu/graphics/demosaicnet/)
+- [代码或实现](https://github.com/mgharbi/demosaicnet_caffe)
+
+### Deep Image Demosaicking using a Cascade of Convolutional Residual Denoising Networks
+
+- authors：Filippos Kokkinos；Stamatis Lefkimmiatis
+- year：2018
+- function：交替执行观测约束与残差降噪，为可解释迭代重建提供参照。
+- relationship：论文为研究依据；本地公开模型推理另列，不等于已整合为默认算法。
+- materialStatus：官方公开模型用于独立对照，没有开展训练或微调。
+- [原出处](https://openaccess.thecvf.com/content_ECCV_2018/papers/Filippos_Kokkinos_Deep_Image_Demosaicking_ECCV_2018_paper.pdf)
+- [代码或实现](https://github.com/cig-skoltech/deep_demosaick)
+
+### Unprocessing Images for Learned Raw Denoising
+
+- authors：Tim Brooks；Ben Mildenhall；Tianfan Xue；Jiawen Chen；Dillon Sharlet；Jonathan T. Barron
+- year：2019
+- function：研究如何撤销部分显影处理，合成更接近真实 RAW 的训练数据。
+- relationship：仅参考数据构建思想；逆处理不能恢复 JPEG 已丢失的真实 RAW 信息。
+- materialStatus：没有将该网络、权重或训练管线加入当前软件。
+- [原出处](https://openaccess.thecvf.com/content_CVPR_2019/papers/Brooks_Unprocessing_Images_for_Learned_Raw_Denoising_CVPR_2019_paper.pdf)
+- [代码或实现](https://github.com/timothybrooks/unprocessing)
+
+### A Physics-Based Noise Formation Model for Extreme Low-Light Raw Denoising
+
+- authors：Kaixuan Wei；Ying Fu；Jian Yang；Hua Huang
+- year：2020
+- function：研究弱信号下电子噪声与相机标定，供蓝光低信号方向参考。
+- relationship：仅参考；相机型号名不能代替具体传感器和读出条件标定。
+- materialStatus：未接入原模型。公开代码提供哪些噪声机制，需要与论文所述范围分别确认。
+- [原出处](https://openaccess.thecvf.com/content_CVPR_2020/papers/Wei_A_Physics-Based_Noise_Formation_Model_for_Extreme_Low-Light_Raw_Denoising_CVPR_2020_paper.pdf)
+- [代码或实现](https://github.com/Vandermode/ELD)
+
+### Joint Demosaicking and Denoising by Fine-Tuning of Bursts of Raw Images
+
+- authors：Thibaud Ehret；Axel Davy；Pablo Arias；Gabriele Facciolo
+- year：2019
+- function：利用同场景 RAW 连拍与帧间关系开展真实数据学习。
+- relationship：仅参考后续数据采集与训练方向，不等于单张 RAW 自带干净真值。
+- materialStatus：未接入原代码、模型或连拍训练流程；当前实验没有训练。
+- [原出处](https://openaccess.thecvf.com/content_ICCV_2019/papers/Ehret_Joint_Demosaicking_and_Denoising_by_Fine-Tuning_of_Bursts_of_Raw_ICCV_2019_paper.pdf)
+- [代码或实现](https://github.com/tehret/mosaic-to-mosaic)
+
+### Noise2Self: Blind Denoising by Self-Supervision
+
+- authors：Joshua Batson；Loïc Royer
+- year：2019
+- function：在缺少干净真值时评价或校准降噪器，研究自监督方法。
+- relationship：仅参考；行噪声、固定图样和插值相关噪声可能违反独立性假设。
+- materialStatus：当前未接入该代码或训练方法；实拍相位留出测试不宣称复现此论文。
+- [原出处](https://proceedings.mlr.press/v97/batson19a.html)
+- [代码或实现](https://github.com/czbiohub-sf/noise2self)
+
+### How to best combine demosaicing and denoising?
+
+- authors：Yu Guo；Qiyu Jin；Jean-Michel Morel；Gabriele Facciolo
+- year：2024 卷期（2023 在线）
+- function：比较重建与降噪的处理顺序、噪声相关性和轻量组合代价。
+- relationship：参考其比较问题与评价思路；本地前后软降噪不是论文中完整方法的复现。
+- materialStatus：已纳入顺序对照依据，不假定联合网络必胜，也不把论文某个倍率硬编码到软件。
+- [原出处](https://www.aimsciences.org/article/doi/10.3934/ipi.2023044)
+
+### Image Denoising by Sparse 3-D Transform-Domain Collaborative Filtering
+
+- authors：K. Dabov；A. Foi；V. Katkovnik；K. Egiazarian
+- year：2007
+- function：利用相似图块分组、变换域收缩与聚合进行降噪。
+- relationship：BM3D方法基础；调用的实际软件另在本地实验条目列出。
+- materialStatus：研究来源，不等于软件默认已启用BM3D。
+- [原出处](https://webpages.tuni.fi/foi/GCF-BM3D/)
+- [代码或实现](https://pypi.org/project/bm3d/)
+
+### Collaborative Filtering of Correlated Noise: Exact Transform-Domain Variance for Improved Shrinkage and Patch Matching
+
+- authors：Y. Mäkinen；L. Azzari；A. Foi
+- year：2020
+- function：研究相关噪声下的变换域方差、收缩及图块匹配。
+- relationship：当前官方BM3D软件的研究依据；本轮小样固定标量噪声，未宣称已估计全图噪声PSD。
+- materialStatus：已查官方软件说明；局部顺序实验的具体条件另有记录。
+- [原出处](https://webpages.tuni.fi/foi/GCF-BM3D/)
+- [代码或实现](https://pypi.org/project/bm3d/)
+
+### Contour Detection and Hierarchical Image Segmentation / BSDS500
+
+- authors：Pablo Arbelaez, Michael Maire, Charless Fowlkes, Jitendra Malik
+- year：2011
+- version：Official BSR_bsds500.tgz, last modified 2013-01-22
+- function：提供官方分组的训练、验证与数字测试图像；不作为原生RAW真值。
+- relationship：使用官方图像进行本轮个人研究的合成采样训练/验证/测试；不使用分割真值。
+- materialStatus：已下载，官方train200/val100/test200不变，包及逐图SHA256、解码像素SHA已登记。 限制：已显影JPEG不是相机线性RAW真值；逆sRGB只是定义明确的数字近似。官方页面要求引用原论文并隔离测试；包内README针对BSR工具，未将工具BSD声明当作所有图像的统一授权。
+- [原出处](https://www2.eecs.berkeley.edu/Research/Projects/CS/vision/grouping/resources.html)
+
+### Normalized and Differential Convolution
+
+- authors：Hans Knutsson, Carl-Fredrik Westin
+- year：1993
+- version：CVPR1993:515-523, author bibliography verified
+- function：明确区分缺失与真实零值，为同色归一化插值初估提供理论背景。
+- relationship：缺失/不确定采样加权归一化的理论背景。自研初始化采用明确掩码的归一化卷积，不复制原论文完整高阶算子。
+- materialStatus：已核对作者机构书目；不声称本轮复现原文实验。
+- [原出处](https://staff.gitlab-pages.liu.se/publications/hankn25/)
+
+### Confidence Propagation through CNNs for Guided Sparse Depth Regression
+
+- authors：Abdelrahman Eldesokey, Michael Felsberg, Fahad Shahbaz Khan
+- year：2019
+- version：arXiv1811.01791v2; code commit d85d4b659f2207b397c62d81f27f363baf3397be
+- function：稀疏输入、归一化权重和置信传播的静态研究参考。
+- relationship：借鉴稀疏掩码、归一化权重及置信传播思想；原任务是深度补全，未将深度模型权重用于RAW。当前CNN仅使用自研固定归一化初估，未集成该项目的学习置信层。
+- materialStatus：固定官方commit静态核对NConv2d和losses；保留GNU GPLv3原文件；本轮个人研究不将其打包进产品。 限制：原代码以非零值判定部分有效深度，不能照搬为RAW有效掩码：黑色/负黑电平残差仍可能是真实采样。传播confidence也不是无需标定的概率。
+- [原出处](https://arxiv.org/abs/1811.01791)
+- [代码或实现](https://github.com/abdo-eldesokey/nconv)
+
+### Joint Demosaicking and Denoising Benefits from a Two-stage Training Strategy
+
+- authors：Yu Guo, Qiyu Jin, Gabriele Facciolo, Tieyong Zeng, Jean-Michel Morel
+- year：2023
+- version：JCAM434:115330; arXiv2009.06205v3
+- function：研究先学习缺失采样、再处理重建后噪声的分阶段方法。
+- relationship：原文RGB方案为GBTF+残差CNN保测量点，之后第二CNN去相关噪声；当前自研单色模型借鉴先学无噪声插值再含噪声训练的分阶段思路，不是原论文双CNN完整复现。
+- materialStatus：已阅读原文第3节及Fig2，下载PDF并登记SHA。作者出版页面未核实到这篇文章的独立官方训练仓库。 限制：论文两阶段独立训练不等于本轮hard最佳权重初始化后soft微调；RGB/高斯噪声结论不能直接当作mono/真实RAW收益。
+- [原出处](https://arxiv.org/abs/2009.06205v3)
+
+### A Review of an Old Dilemma: Demosaicking First, or Denoising First?
+
+- authors：Qiyu Jin, Gabriele Facciolo, Jean-Michel Morel
+- year：2020
+- version：CVPR2020 NTIRE Workshop
+- function：比较降噪与去马赛克顺序，解释重建后噪声相关性。
+- relationship：为后续IPI2024顺序研究提供前序依据；本轮对前降噪/后降噪/联合学习分别记录，不把一种顺序预定为胜出。
+- materialStatus：已核对作者项目页面和CVF原文入口。
+- [原出处](https://openaccess.thecvf.com/content_CVPRW_2020/html/w31/Jin_A_Review_of_an_Old_Dilemma_Demosaicking_First_or_Denoising_CVPRW_2020_paper.html)
+- [代码或实现](https://gfacciol.github.io/demosaic-ntire2020/)
+
+### 噪声加权数据保真与饱和约束（下一轮可检验方案）
+
+- authors：toMONO 自研方案，统计背景见参考条目
+- year：2026
+- version：proposal-v1
+- function：下一轮可检验的异方差保真与饱和约束方案，尚未实现。
+- relationship：从Poisson-Gaussian方差模型推导的自研优化目标：按方差降低低信号高噪声采样的约束权重，同时保留硬保真可选路径。
+- materialStatus：资料方案；当前训练代码实际损失仍是线性MSE，并未实现这里的异方差似然或饱和不等式。 限制：a/b须在相机/ISO/曝光条件下校准；不得从未知纹理轻率估噪声，饱和样本不能当精确等式；不能以额外颗粒掩盖相关噪声。
+
+### 局部统计Wiener方法：SciPy官方说明及其所列Lim1990来源
+
+- authors：Jae S. Lim；SciPy文档贡献者
+- year：1990
+- version：Two-Dimensional Signal and Image Processing p.548；通过SciPy官方文档追溯
+- function：为同色局部方差收缩研究提供Wiener统计依据。
+- relationship：本轮wiener_guard的局部均值/方差收缩背景；实现为同色9邻居和声明噪声的独立C/C++机制，并非复制SciPy代码或原书完整复现。
+- materialStatus：已核对SciPy官方接口/引用；未声称已直接核对原书全部内容。 限制：真实细纹理会污染局部方差；允许改变实测值。零噪声下回到cubic_guard，而非新物理采样。
+- [原出处](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.wiener.html)
+
+### NegPy 本地源码：三色合成、线性解码与手工分组
+
+- authors：marcinz606 / NegPy contributors；本地构建另有修订
+- year：2026
+- version：本地0.65.0数值函数实测；0.66.0源码静态核对
+- function：核对单通道DNG的线性读取、ensure_rgb扩展、R/G/B指定通道组装和手工Edit RGB Triplet流程。
+- relationship：只读互操作参考；未在toMONO中打包、调用或复制NegPy代码。0.66部分计算转入Rust，不能把本地不同版本称为逐字相同。
+- materialStatus：本地0.65实际数值函数对3个既有96MP窄带DNG与1个512局部DNG的读取/线性尺度/通道组装检查通过；测试使用本地rawpy，未执行NegPy GUI或cv2亚像素对齐。0.66源码与Rust核心核对仍只按CFA颜色代码自动分类，去CFA后的单色DNG会丢失分类依据，需手工分配；新_R/G/B_窄带后缀不被当前自动分类器识别。Documents/NegPy为用户数据目录，不是源码版本证据。
+- [原出处](https://github.com/marcinz606/NegPy)
+- [代码或实现](https://github.com/marcinz606/NegPy)
+
+### New Edge-Directed Interpolation
+
+- authors：Xin Li；Michael T. Orchard
+- year：2001
+- version：IEEE Transactions on Image Processing 10(10), 1521-1527；DOI 10.1109/83.951537
+- function：从低分辨率局部协方差转移到较细格点的边缘自适应插值；含灰度与另行采用色差的彩色演示。
+- relationship：g_ar_reliable / g_ar_noiseaware 仅借粗细尺度方向统计迁移；其一参数 H/V 多项式混合、PRESS 代理与噪声机制均为独立改写。 纹理的粗尺度 alias 可改变方向关系；不是原四预测器 NEDI 复现，不继承任意角度最优性或原文图像成绩。
+- materialStatus：2026-10-31核实的primary出处。 本轮仅借所述原则；未复制原作者代码、未运行其完整算法、不继承原文成绩。本次未核实当前作者官方源码；本地独立实现只读审阅。
+- [原出处](https://doi.org/10.1109/83.951537)
+
+### An Edge-Guided Image Interpolation Algorithm via Directional Filtering and Data Fusion
+
+- authors：Lei Zhang；Xiaolin Wu
+- year：2006
+- version：IEEE Transactions on Image Processing 15(8), 2226-2238；DOI 10.1109/TIP.2006.877407
+- function：从两个正交方向产生目标像素估计，再使用方向统计作 LMMSE 融合，另提供简化版本。
+- relationship：借用方向预测与统计融合思路；本轮以对称 H/V 多项式和局部 ridge + reliability 混合。 不是原文 LMMSE 方程、方向误差建模或完整算法复现；不能仅因使用两个方向就称 LMMSE 最优估计。
+- materialStatus：2026-10-31核实的primary出处。 本轮仅借所述原则；未复制原作者代码、未运行其完整算法、不继承原文成绩。本次未核实当前官方独立源码入口，不使用第三方付费代码页面。
+- [原出处](https://doi.org/10.1109/TIP.2006.877407)
+
+### The Relationship Between Variable Selection and Data Agumentation and a Method for Prediction
+
+- authors：David M. Allen
+- year：1974
+- version：Technometrics 16(1), 125-127；DOI 10.1080/00401706.1974.10489157
+- function：固定非随机设计矩阵中的变量选择/增广与 ridge 预测；PRESS 是对被删观测的预测平方误差之和，原文也说明这是既有 PRESS 的扩展。
+- relationship：固定局部设计行、权重和 lambda 的一参数 ridge 删行残差代数；分母稳定化后作为可靠性代理。 原 RAW 样本没有真正删去，其他重叠训练行、设计特征、beta 与 lambda 未重算；不能称独立 held-out 验证、实际 source-LOO、无偏风险或统计置信度。
+- materialStatus：2026-10-31核实的primary出处。出版社页面和原文首题均印作 Agumentation；规范化拼写 Augmentation 另存，未静默改变原题。 本轮仅借所述原则；未复制原作者代码、未运行其完整算法、不继承原文成绩。本条是统计原理论来源；未声称运行原作者代码。
+- [原出处](https://www.tandfonline.com/doi/abs/10.1080/00401706.1974.10489157)
+
+### Generalized Cross-Validation as a Method for Choosing a Good Ridge Parameter
+
+- authors：Gene H. Golub；Michael Heath；Grace Wahba
+- year：1979
+- version：Technometrics 21(2), 215-223；DOI 10.1080/00401706.1979.10489751
+- function：固定线性 smoother / ridge 框架下，用残差与有效自由度 trace 构造 GCV，选择 ridge 参数；论文本身的 GCV 不要求先给 sigma²。
+- relationship：仅作线性 ridge 预测风险思路的出处。本轮 lambda 固定为 0.01*dd + floor，没有计算/最小化 GCV trace 准则。 不能称 GCV 选参、GCV 最优噪声模型或 GCV 复现；GCV 无需已知 sigma² 不意味着本轮显式扣噪模块无需标定 sigma。
+- materialStatus：2026-10-31核实的primary出处。 本轮仅借所述原则；未复制原作者代码、未运行其完整算法、不继承原文成绩。本次不使用或复现原作者 GCV 源码。
+- [原出处](https://www.tandfonline.com/doi/abs/10.1080/00401706.1979.10489751)
+
+### Accurate Monotonicity Preserving Cubic Interpolation
+
+- authors：James M. Hyman
+- year：1983
+- version：SIAM Journal on Scientific and Statistical Computing 4(4), 645-654；DOI 10.1137/0904045
+- function：通过限制 Hermite 导数，使一维分段三次插值符合数据的局部单调性。
+- relationship：仅借保持局部形状/范围原则；本轮 guard 是二维目标色邻域 min/max 投影并可向 pilot 收缩。 不等于 Hyman 的导数约束算法，也不保证二维方向单调、仿射精确、无带内振铃或恢复真实未采样极值。含噪观测的范围不等于 clean 真值范围。
+- materialStatus：2026-10-31核实的primary出处。 本轮仅借所述原则；未复制原作者代码、未运行其完整算法、不继承原文成绩。本轮没有实现或执行 Hyman 原算法。
+- [原出处](https://epubs.siam.org/doi/10.1137/0904045)
+
+### Jiangtherapee Super Resolution：公开核心的静态审阅
+
+- authors：y-g-jiang / Jiangtherapee 项目；toMONO只读审阅
+- year：2026
+- version：固定提交884a954b70ede86ab34b0256c4fcbcf15e631df9
+- function：核对局部RGB幅度归一化、151输入/36输出Controller、GreenFiLM颜色差残差及权重路由，理解RAW burst强度处理与跨色先验边界。
+- relationship：仅静态研究参考；未在toMONO中运行、调用、打包、复制或整合其代码与权重。其幅度、混色灰度结构和R/G/B残差耦合不能直接用于strict目标色隔离。
+- materialStatus：2026-10-31通过GitHub固定提交只读核对：公开7个Python核心文件与22份NPZ条目，权重清单名称和声明字节数可与树核对，但未下载或验证NPZ内容。显式本地import所指模块均存在；公开部分缺RAW读取/归一化、配准、Tap统计生成、Controller到融合的调用链、应用主入口及训练/复现实验协议，不能称完整RAW端到端复现。README“无源码”与该提交公开树不一致；所述论文全文尚未取得，不采用其性能自述为本软件验收证据。
+- [原出处](https://github.com/y-g-jiang/Jiangtherapee-Super-Resolution-World-Best/tree/884a954b70ede86ab34b0256c4fcbcf15e631df9)
+- [代码或实现](https://github.com/y-g-jiang/Jiangtherapee-Super-Resolution-World-Best/tree/884a954b70ede86ab34b0256c4fcbcf15e631df9/Core-Only-Source-Code)

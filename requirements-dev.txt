@@ -1,0 +1,3 @@
+-r requirements-build.txt
+# Independent ICC / PNG checks; not required by the conversion runtime.
+pillow==13.0.0
