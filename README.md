@@ -4,6 +4,8 @@
 
 当前源码版本：**1.0 Beta 8.1（构建 11）**。
 
+[下载 macOS 测试版](https://github.com/easonzhangbin/toMONO/releases/tag/v1.0.0-beta.8.1) · [图片与比较条件](docs/GALLERY.md) · [使用与构建](docs/BUILD.md)
+
 toMONO 是一个 macOS 原生界面、开放源码的实验性 RAW 单色重建项目。它将彩色传感器的原始采样重建为可继续显影的单通道 DNG，并提供独立 R / G / B 窄带输出，用于底片翻拍等研究。
 
 ## 与普通 RGB 照片去饱和度有什么不同？
@@ -26,6 +28,16 @@ toMONO 把控制点前移到 **RAW 采样与线性通道响应**：先读取传�
 
 进一步阅读：[工作原理](docs/PRINCIPLES.md) · [算法与研究出处](docs/RESEARCH.md) · [构建说明](docs/BUILD.md)。
 
+## 软件界面与响应对照
+
+![toMONO 主界面：左侧照片与导出，中间单色预览，右侧直方图和逐张设置](docs/images/workspace.png)
+
+实际 SwiftUI 工作区，载入实拍 RAW 后生成单色预览；顶部提供“支持 toMONO”入口。
+
+![同一照片的彩色显影、RGB 线性亮度和 toMONO 绿色响应对照](docs/images/response-comparison.png)
+
+上图展示不同响应路径的明暗关系：中图采用一个明确的线性 sRGB 亮度公式，并不代表所有黑白工具；右图使用 C01 重建绿色响应。两条路径的白平衡与颜色变换不同，这张图用于说明外观差异，不用于证明解析力高低。三栏共同使用 Gamma 2.2、0 EV，没有逐图拉齐明暗。
+
 ## 当前功能
 
 - 简体中文 SwiftUI / AppKit 界面、原生材质、缩放与拖动画面、直方图和执行日志。
@@ -46,9 +58,26 @@ toMONO 把控制点前移到 **RAW 采样与线性通道响应**：先读取传�
 
 这三种实现是本项目的确定性研究实现，不是预训练 AI 模型，不宣称增加超过采样极限的真实细节。旧预设保留 `legacy` 路径。详见 [验证边界与复现](docs/VALIDATION.md)。
 
+![M11 帽子织纹：同色三次基线、C01、D11、D10 对照](docs/images/hat-algorithms.png)
+
+四栏使用同一张 M11 RAW、同一 G 采样和相同 512×512 裁切。绿色校正、坏点和镜头处理关闭，Gamma 2.2、0 EV，无额外锐化。**点击图片按原生大小观察**；GitHub 缩图可能掩盖差异或产生缩放纹理。实拍没有逐像素真值，清晰观感不能单独证明真实细节增加。
+
+<details>
+<summary>同时检查平滑区域、缝线和颗粒</summary>
+
+![M11 外套平滑区域与缝线的四模式对照](docs/images/coat-algorithms.png)
+
+保留平滑区域作为对照，避免只展示细密织纹。暗部颗粒、相位纹理与边缘过冲同样是选择模式时要考虑的取舍。
+
+</details>
+
+[查看全部原图、生成脚本与比较条件](docs/GALLERY.md)
+
 ## 开始使用 / 开发
 
 目标平台：**Apple Silicon、macOS 14 及以上**。构建需要支持源码所用 SwiftUI API 的 Xcode / SDK；macOS 26 的玻璃 API 有运行时可用性检查。最低系统声明不等于所有系统版本均已真机验证。
+
+直接使用请前往 [Releases](https://github.com/easonzhangbin/toMONO/releases/tag/v1.0.0-beta.8.1) 下载 `.dmg`，打开后将 toMONO 拖入“应用程序”。本测试包为 ad-hoc 签名，尚未完成 Apple Developer ID 签名和公证，首次打开可能被 Gatekeeper 阻止。开发者可按下列步骤从源码构建。
 
 ```sh
 git clone https://github.com/easonzhangbin/toMONO.git
@@ -66,7 +95,7 @@ open .build/toMONO.app
 portable/.venv/bin/python portable/tomono_cli.py input.ARW -o output.dng
 ```
 
-Xcode、编译模块、DMG 打包和独立窄带示例见 [构建说明](docs/BUILD.md)。首次开源发布提供源码；历史本机测试 DMG、私人照片、模型权重和训练数据不随仓库发布。
+Xcode、编译模块、DMG 打包和独立窄带示例见 [构建说明](docs/BUILD.md)。Release 提供当前测试版 DMG、项目源码、SHA-256 校验文件和第三方源码材料；原始实拍 RAW、历史完整输出、模型权重与训练数据不随仓库发布。
 
 ## 研究与贡献
 

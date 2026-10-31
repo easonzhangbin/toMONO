@@ -4,7 +4,7 @@
 
 ## 环境准备
 
-安装 Xcode，完成首次启动与许可确认，确保 `xcode-select -p` 指向所选 Xcode。源码包含 macOS 26 原生玻璃 API，因此构建需要包含这些 API 的 SDK（Xcode 26 或更新）；应用对较旧系统回退到原生材质。现有开发验证使用 Xcode 27.1，最低部署目标 macOS 14 未等同于最低版本真机验证。
+安装 Xcode，完成首次启动与许可确认，确保 `xcode-select -p` 指向所选 Xcode。源码包含 macOS 26 原生玻璃 API，因此构建需要包含这些 API 的 SDK（Xcode 26 或更新）；应用对较旧系统回退到原生材质。当前源码快照验证使用 Xcode 27.2，最低部署目标 macOS 14 未等同于最低版本真机验证。
 
 ```sh
 brew install uv exiftool
@@ -57,4 +57,4 @@ portable/.venv/bin/python portable/tomono_cli.py red.RW2 -o red_R.dng --recipe e
 portable/.venv/bin/python macos/package_dmg.py --app .build/toMONO.app --output dist/toMONO-source-build-AppleSilicon.dmg
 ```
 
-默认是本地 ad-hoc 签名，不是 Developer ID 公证包或 App Store 包。对外分发二进制时，应同步提供精确版本的相应源码、构建材料及第三方依赖声明；本次 GitHub 首发仅发布源码。
+默认是本地 ad-hoc 签名，不是 Developer ID 公证包或 App Store 包。当前 [Release](https://github.com/easonzhangbin/toMONO/releases/tag/v1.0.0-beta.8.1) 同时提供测试 DMG、对应项目源码、校验文件和第三方源码材料。具体组件与固定来源见 [发布依赖清单](RELEASE_DEPENDENCIES.json)；该清单不承诺整套环境逐字节可复现。

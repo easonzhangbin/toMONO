@@ -1,0 +1,68 @@
+{
+  "release": "1.0 Beta 8.1 build 11",
+  "source_archives": [
+    {
+      "file": "rawpy-0.27.1.tar.gz",
+      "url": "https://codeload.github.com/letmaik/rawpy/tar.gz/refs/tags/v0.27.1",
+      "sha256": "b0e9af3e44a7bb2e66c6c9b4c8e397d0fa2ba307e0e8dc76d2de7ad76d84cba6",
+      "upstream_pinned_sha256": null
+    },
+    {
+      "file": "LibRaw-b860248.tar.gz",
+      "url": "https://codeload.github.com/LibRaw/LibRaw/tar.gz/b860248a89d9082b8e0a1e202e516f46af9adb29",
+      "sha256": "f5da1e522ea195b54b30f3ff105ef2193daa04ea165dea825b4d6fe9d886395b",
+      "upstream_pinned_sha256": null
+    },
+    {
+      "file": "LibRaw-cmake-6e26c9e.tar.gz",
+      "url": "https://codeload.github.com/LibRaw/LibRaw-cmake/tar.gz/6e26c9e73677dc04f9eb236a97c6a4dc225ba7e8",
+      "sha256": "d0ecc870bb395ca05d4de61314d092437bb37afac1e17131cc64c58e57369a11",
+      "upstream_pinned_sha256": null
+    },
+    {
+      "file": "lensfunpy-1.18.0.tar.gz",
+      "url": "https://codeload.github.com/letmaik/lensfunpy/tar.gz/refs/tags/v1.18.0",
+      "sha256": "293f6a0edd212331532123002b1c4a73cbd6e2e43706357e05cb19652e90580d",
+      "upstream_pinned_sha256": null
+    },
+    {
+      "file": "lensfun-101c745.tar.gz",
+      "url": "https://codeload.github.com/lensfun/lensfun/tar.gz/101c745e847a5de4a1e569a94368ce2027198598",
+      "sha256": "a11cbe6aeec657839540448b253217c25d20b7a45b6aebfef406f7239933c7a6",
+      "upstream_pinned_sha256": null
+    },
+    {
+      "file": "gettext-0.22.4.tar.xz",
+      "url": "https://ftp.gnu.org/gnu/gettext/gettext-0.22.4.tar.xz",
+      "sha256": "29217f1816ee2e777fa9a01f9956a14139c0c23cc1b20368f06b2888e8a34116",
+      "upstream_pinned_sha256": "29217f1816ee2e777fa9a01f9956a14139c0c23cc1b20368f06b2888e8a34116"
+    },
+    {
+      "file": "glib-2.79.1.tar.xz",
+      "url": "https://download.gnome.org/sources/glib/2.79/glib-2.79.1.tar.xz",
+      "sha256": "b3764dd6e29b664085921dd4dd6ba2430fc19760ab6857ecfa3ebd4e8c1d114c",
+      "upstream_pinned_sha256": "b3764dd6e29b664085921dd4dd6ba2430fc19760ab6857ecfa3ebd4e8c1d114c"
+    },
+    {
+      "file": "libffi-3.5.2.tar.gz",
+      "url": "https://github.com/libffi/libffi/releases/download/v3.5.2/libffi-3.5.2.tar.gz",
+      "sha256": "f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc",
+      "upstream_pinned_sha256": "f3a3082a23b37c293a4fcd1053147b371f2ff91fa7ea1b2a52e335676bac82dc"
+    },
+    {
+      "file": "pcre2-10.47.tar.gz",
+      "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.gz",
+      "sha256": "c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16",
+      "upstream_pinned_sha256": "c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16"
+    }
+  ],
+  "lensfun_build_recipe": "https://github.com/letmaik/lensfunpy/blob/v1.18.0/.github/scripts/build-macos.sh",
+  "rawpy_build_recipe": "https://github.com/letmaik/rawpy/tree/v0.27.1/.github",
+  "dependency_git_submodules": {
+    "rawpy/external/LibRaw": "b860248a89d9082b8e0a1e202e516f46af9adb29",
+    "rawpy/external/LibRaw-cmake": "6e26c9e73677dc04f9eb236a97c6a4dc225ba7e8",
+    "lensfunpy/external/lensfun": "101c745e847a5de4a1e569a94368ce2027198598"
+  },
+  "exiftool_version": "13.53",
+  "scope": "Source and build material for bundled LibRaw, Lensfun/database, GLib, gettext/libintl and their build dependencies, plus rawpy/lensfunpy wrappers and exact ExifTool Perl source. Other permissive runtime licenses are in ThirdPartyNotices.txt; this is not a promise of a bit-for-bit full-environment rebuild."
+}

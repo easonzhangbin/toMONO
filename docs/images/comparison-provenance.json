@@ -1,0 +1,100 @@
+{
+  "source_sha256": "09bd27dfb4298256b4c28912a5d8de416a0bbf73b7a26625fa8dd38656a225e0",
+  "camera": "LEICA M11",
+  "target": "G",
+  "rawpy_version": "0.27.1",
+  "libraw_version": [
+    0,
+    22,
+    1
+  ],
+  "kernel_sha256": {
+    "detail_reconstruction.py": "831962b313a5459e945ad9f82d47f9e246d23685e17126839f3ac788a9b8c923",
+    "src/detail_native.c": "f6047fcba4489dc6d1b9427ebe4066d0c787048f3461480e5969fb2060dadf77",
+    "pure_narrowband.py": "9f2b6257715a54530cb389c9cbda2682e9680ed090d9ca46b8892ccf8958a3e3"
+  },
+  "display": "gamma 2.2, EV 0, no per-panel stretch or sharpening",
+  "green_correction": "off",
+  "defect_repair": "off",
+  "lens_correction": "off",
+  "ground_truth": false,
+  "source_raw_included": false,
+  "rois": [
+    {
+      "name": "hat",
+      "xywh_full_raw": [
+        4336,
+        2848,
+        512,
+        512
+      ],
+      "halo": 64,
+      "methods": [
+        {
+          "code": "C00",
+          "kernel": "pure_narrowband.channel_strips/cubic",
+          "dn_sha256": "0d6c23d2199a47d761cefc55857b062440b52102783e906814dec89b7f992819"
+        },
+        {
+          "code": "C01",
+          "kernel": "spectral",
+          "dn_sha256": "e9201d456e0d20cd0d048554d6c477b2d0e73c7bf21384caa0cb7da1876ac361"
+        },
+        {
+          "code": "D11",
+          "kernel": "spectral_guard",
+          "dn_sha256": "90501918062699f8b86ccb7c859fa2578769724b0dbe031700df731f4f9aa7fd"
+        },
+        {
+          "code": "D10",
+          "kernel": "directional",
+          "dn_sha256": "4b91a36f3aa0d0cd658c5cb12050dd54db0ff65567dcd1ce72a49af51fa3633e"
+        }
+      ]
+    },
+    {
+      "name": "coat",
+      "xywh_full_raw": [
+        4416,
+        3776,
+        512,
+        512
+      ],
+      "halo": 64,
+      "methods": [
+        {
+          "code": "C00",
+          "kernel": "pure_narrowband.channel_strips/cubic",
+          "dn_sha256": "102ad1244b524fb3fe760ed713841465bac2cd240d76230972b79b7ae35def97"
+        },
+        {
+          "code": "C01",
+          "kernel": "spectral",
+          "dn_sha256": "bcf47393315ce6b7f4c141299b238ce4238ad3666c624195f11e447d8c753d52"
+        },
+        {
+          "code": "D11",
+          "kernel": "spectral_guard",
+          "dn_sha256": "316e35c2e288bd801c79bdc23cd491111df870e95d291803c6884b564bf6976a"
+        },
+        {
+          "code": "D10",
+          "kernel": "directional",
+          "dn_sha256": "8957c74b7c4aa90efc843433126654ac41a407b503f4f4847a187e1add1df5e0"
+        }
+      ]
+    }
+  ],
+  "response_comparison": {
+    "xywh_full_raw": [
+      2800,
+      2700,
+      3000,
+      2200
+    ],
+    "rgb": "LibRaw camera WB, linear sRGB, no auto brightness",
+    "rgb_gray": "linear sRGB Y = 0.2126 R + 0.7152 G + 0.0722 B; one defined example, not all desaturation tools",
+    "mono": "current C01, G only, correction off",
+    "overview": "linear BOX area reduction to 750x550 before gamma"
+  }
+}

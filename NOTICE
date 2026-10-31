@@ -9,3 +9,8 @@ see THIRD_PARTY_NOTICES.md, docs/PROVENANCE.md and macos/assets/licenses/.
 The support artwork is supplied by the project maintainer to identify the
 intended recipient of voluntary support. It contains third-party marks.
 The project license does not grant rights to those marks or imply endorsement.
+
+The photographic examples in docs/images are supplied by the project maintainer
+for documentation and algorithm comparison. Original RAW files are not included.
+The source-code license does not grant personality rights or rights to third-party
+marks depicted in those examples, nor imply endorsement by photographed people.
