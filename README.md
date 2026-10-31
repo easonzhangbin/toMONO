@@ -2,7 +2,7 @@
 
 **从 RAW 采样出发，探索单色影像的响应、层次与细节。**
 
-当前源码版本：**1.0 Beta 8.1**。
+当前源码版本：**1.0 Beta 8.1（构建 11）**。
 
 toMONO 是一个 macOS 原生界面、开放源码的实验性 RAW 单色重建项目。它将彩色传感器的原始采样重建为可继续显影的单通道 DNG，并提供独立 R / G / B 窄带输出，用于底片翻拍等研究。
 
@@ -84,7 +84,7 @@ Xcode、编译模块、DMG 打包和独立窄带示例见 [构建说明](docs/BU
   <img src="macos/assets/SupportAlipay.jpg" alt="支付宝支持二维码，收款方 StudioPURE" width="260">
 </p>
 
-[支持页面与收款码原图](docs/SUPPORT.md) · 软件顶部也有“请我喝咖啡”入口。
+[支持页面与收款码原图](docs/SUPPORT.md) · 软件顶部也有“☕ 支持 toMONO”入口。
 
 ## 许可
 

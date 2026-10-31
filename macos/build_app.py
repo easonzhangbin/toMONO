@@ -18,7 +18,7 @@ try:
     shutil.rmtree(iconset)
     info={'CFBundleExecutable':'toMONO','CFBundleIdentifier':'cn.local.tomono.mac',
         'CFBundleName':'toMONO','CFBundleDisplayName':'toMONO','CFBundlePackageType':'APPL','CFBundleIconFile':'toMONO.icns',
-        'CFBundleShortVersionString':'1.0.0','CFBundleVersion':'10','ToMONOReleaseLabel':'1.0 Beta 8.1','LSMinimumSystemVersion':'14.0',
+        'CFBundleShortVersionString':'1.0.0','CFBundleVersion':'11','ToMONOReleaseLabel':'1.0 Beta 8.1','LSMinimumSystemVersion':'14.0',
         'LSApplicationCategoryType':'public.app-category.photography',
         'CFBundleDevelopmentRegion':'zh_CN','CFBundleLocalizations':['zh-Hans'],
         'NSHighResolutionCapable':True,'NSPrincipalClass':'NSApplication','CFBundleDocumentTypes':[{'CFBundleTypeName':'相机RAW文件','CFBundleTypeRole':'Viewer','LSHandlerRank':'Alternate','LSItemContentTypes':['public.camera-raw-image']}]}

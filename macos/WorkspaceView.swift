@@ -93,7 +93,13 @@ struct ContentView: View {
                 Button("使用帮助") { openWindow(id: "help") }
             }
             ToolbarItem {
-                Button("请我喝咖啡", systemImage: "cup.and.saucer") { openWindow(id: "support") }
+                Button { openWindow(id: "support") } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "cup.and.saucer")
+                        Text("支持 toMONO")
+                    }.fixedSize()
+                }
+                    .accessibilityLabel("支持 toMONO")
                     .help("自愿支持 toMONO 的开发与影像研究")
             }
         }
@@ -486,7 +492,7 @@ struct HelpCommands: Commands {
             Button("toMONO 使用帮助") { openWindow(id: "help") }.keyboardShortcut("?", modifiers: .command)
             Button("执行日志") { openWindow(id: "execution-log") }.keyboardShortcut("l", modifiers: [.command, .option])
             Divider()
-            Button("请我喝咖啡") { openWindow(id: "support") }
+            Button("支持 toMONO") { openWindow(id: "support") }
         }
     }
 }
