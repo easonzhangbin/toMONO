@@ -212,7 +212,7 @@ def write_dng(source,output,pixels,black,white,structure,recipe):
        (50717,'I',1,int(white),False),(50719,'2I',2,rational_pair(structure['crop_origin']),False),
        (50720,'2I',2,rational_pair(structure['crop_size']),False),(50829,'I',4,tuple(structure['active_area']),False)]
     with tifffile.TiffWriter(output,byteorder='<') as t:
-        t.write(preview,photometric='rgb',subifds=1,subfiletype=1,metadata=None,software='toMONO 1.1.0 (build 15)',extratags=common)
+        t.write(preview,photometric='rgb',subifds=1,subfiletype=1,metadata=None,software='toMONO 1.2.0 (build 16)',extratags=common)
         t.write(pixels,photometric=34892,metadata=None,software=False,rowsperstrip=h,extratags=rawtags)
     with Path(output).open('r+b') as stream:
         with tifffile.TiffFile(stream) as t:
@@ -236,6 +236,15 @@ def write_dng(source,output,pixels,black,white,structure,recipe):
         if result.returncode:
             warnings.append('RAW已重建，但部分拍摄信息未复制：'+result.stderr.strip())
             event('metadata_copy_warning','warning',source=str(source),message=result.stderr.strip())
+        # GPSMeasureMode only defines 2 (2D) and 3 (3D). Omit an undefined
+        # source value, preserving the rest of GPS and capture metadata.
+        if 'GPS:all' in copy:
+            probe=subprocess.run([exiftool(),'-config','','-j','-n','-GPS:GPSMeasureMode',str(output)],capture_output=True,text=True,check=True)
+            gps=json.loads(probe.stdout)[0]
+            if 'GPSMeasureMode' in gps and str(gps['GPSMeasureMode']).strip() not in ('2','3'):
+                subprocess.run([exiftool(),'-config','','-overwrite_original','-GPS:GPSMeasureMode=',str(output)],capture_output=True,text=True,check=True)
+                omitted.append('GPS:GPSMeasureMode')
+                event('metadata_field_omitted',source=str(source),field='GPS:GPSMeasureMode',reason='Undefined EXIF measurement mode; other capture metadata retained')
     correction=structure.get('lens_correction')
     if correction or structure.get('lens_history'):
         description=structure.get('source_description','') if recipe.preserve_description else ''

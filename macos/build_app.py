@@ -18,7 +18,7 @@ try:
     shutil.rmtree(iconset)
     info={'CFBundleExecutable':'toMONO','CFBundleIdentifier':'cn.local.tomono.mac',
         'CFBundleName':'toMONO','CFBundleDisplayName':'toMONO','CFBundlePackageType':'APPL','CFBundleIconFile':'toMONO.icns',
-        'CFBundleShortVersionString':'1.1.0','CFBundleVersion':'15','ToMONOReleaseLabel':'1.1 正式版','LSMinimumSystemVersion':'14.0',
+        'CFBundleShortVersionString':'1.2.0','CFBundleVersion':'16','ToMONOReleaseLabel':'1.2 正式版','LSMinimumSystemVersion':'14.0',
         'LSApplicationCategoryType':'public.app-category.photography',
         'CFBundleDevelopmentRegion':'zh_CN','CFBundleLocalizations':['zh-Hans'],
         'NSHighResolutionCapable':True,'NSPrincipalClass':'NSApplication','CFBundleDocumentTypes':[{'CFBundleTypeName':'相机RAW文件','CFBundleTypeRole':'Viewer','LSHandlerRank':'Alternate','LSItemContentTypes':['public.camera-raw-image']}]}
@@ -60,7 +60,7 @@ try:
     tool=Path(shutil.which('exiftool')).resolve();dest=resources/'exiftool';dest.mkdir();shutil.copy2(tool,dest/'exiftool')
     shutil.copytree(tool.parent/'lib',dest/'lib')
     # Preserve the notices shipped by each selected runtime dependency.
-    notices=['toMONO 1.1 正式版 — 项目与第三方组件许可\n\n源码：https://github.com/easonzhangbin/toMONO\n项目原创源码：GPL-3.0-only。第三方组件保留各自许可。\n', (ROOT/'LICENSE').read_text()]
+    notices=['toMONO 1.2 正式版 — 项目与第三方组件许可\n\n源码：https://github.com/easonzhangbin/toMONO\n项目原创源码：GPL-3.0-only。第三方组件保留各自许可。\n', (ROOT/'LICENSE').read_text()]
     license_paths=[runtime/'lib/python3.12/LICENSE.txt']
     for directory in sorted(local.glob('*.dist-info')):
         if directory.name.startswith(prefixes):

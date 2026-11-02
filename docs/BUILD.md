@@ -1,6 +1,6 @@
 # 从源码构建
 
-当前源码用于 1.1 正式版（1.1.0，构建15）。目标为 Apple Silicon macOS。前端使用 SwiftUI / AppKit，后台使用 Python 和 C；不是 Python 绘制的界面。
+当前源码用于 1.2 正式版（1.2.0，构建16）。目标为 Apple Silicon macOS。前端使用 SwiftUI / AppKit，后台使用 Python 和 C；不是 Python 绘制的界面。
 
 ## 环境准备
 
@@ -65,4 +65,4 @@ portable/.venv/bin/python portable/tomono_cli.py red.RW2 -o red_R.dng --recipe e
 portable/.venv/bin/python macos/package_dmg.py --app .build/toMONO.app --output dist/toMONO-source-build-AppleSilicon.dmg
 ```
 
-默认是本地 ad-hoc 签名，不是 Developer ID 公证包或 App Store 包。当前 [Release](https://github.com/easonzhangbin/toMONO/releases/tag/v1.1.0) 提供对应版本 DMG、对应项目源码、校验文件和第三方源码材料。具体组件与固定来源见 [发布依赖清单](RELEASE_DEPENDENCIES.json)；该清单不承诺整套环境逐字节可复现。
+默认是本地 ad-hoc 签名，不是 Developer ID 公证包或 App Store 包。当前 [Release](https://github.com/easonzhangbin/toMONO/releases/tag/v1.2.0) 提供对应版本 DMG、对应项目源码、校验文件和第三方源码材料。具体组件与固定来源见 [发布依赖清单](RELEASE_DEPENDENCIES.json)；该清单不承诺整套环境逐字节可复现。

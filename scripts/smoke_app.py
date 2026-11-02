@@ -61,10 +61,10 @@ def main():
         np.testing.assert_array_equal(actual[green], plane[green])
         assert hashlib.sha256(source.read_bytes()).hexdigest() == before
         with tifffile.TiffFile(output) as document:
-            assert document.pages[0].tags['Software'].value == 'toMONO 1.1.0 (build 15)'
+            assert document.pages[0].tags['Software'].value == 'toMONO 1.2.0 (build 16)'
         print(json.dumps({'private_runtime_export': True, 'independent_libraw_readback': True,
                           'measured_green_exact': True, 'source_unchanged': True,
-                          'shape': list(actual.shape), 'software': 'toMONO 1.1.0 (build 15)'}))
+                          'shape': list(actual.shape), 'software': 'toMONO 1.2.0 (build 16)'}))
 
 
 if __name__ == '__main__':

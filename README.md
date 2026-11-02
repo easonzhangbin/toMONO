@@ -2,9 +2,9 @@
 
 **从 RAW 采样出发，探索单色影像的响应、层次与细节。**
 
-当前版本：**1.1 正式版（1.1.0，构建 15）**。包含D10新默认、LMMSE实验选项、局部检查、预览与导出流程优化，以及GitHub新版检查；下载以对应Release实际提供的安装包为准。
+当前版本：**1.2 正式版（1.2.0，构建 16）**。修复部分RAW因异常GPS字段导致的导出失败，并增加RGB响应混合的用途说明与选择提示；保留1.1的预览缓存、细节模式、局部检查和GitHub新版提醒。下载以对应Release实际提供的安装包为准。
 
-[下载 macOS 版](https://github.com/easonzhangbin/toMONO/releases/tag/v1.1.0) · [图片与比较条件](docs/GALLERY.md) · [使用与构建](docs/BUILD.md)
+[下载 macOS 版](https://github.com/easonzhangbin/toMONO/releases/tag/v1.2.0) · [图片与比较条件](docs/GALLERY.md) · [使用与构建](docs/BUILD.md)
 
 toMONO 是一个 macOS 原生界面、开放源码的实验性 RAW 单色重建项目。它将彩色传感器的原始采样重建为可继续显影的单通道 DNG，并提供独立 R / G / B 窄带输出，用于底片翻拍等研究。
 
@@ -37,6 +37,12 @@ toMONO 把控制点前移到 **RAW 采样与线性通道响应**：先读取传�
 ![同一照片的彩色显影、RGB 线性亮度和 toMONO 绿色响应对照](docs/images/response-comparison.png)
 
 上图展示不同响应路径的明暗关系：中图采用一个明确的线性 sRGB 亮度公式，并不代表所有黑白工具；右图使用 C01 重建绿色响应。两条路径的白平衡与颜色变换不同，这张图用于说明外观差异，不用于证明解析力高低。三栏共同使用 Gamma 2.2、0 EV，没有逐图拉齐明暗。
+
+## 1.2 修复与说明
+
+- 修复部分包含异常GPS测量模式字段的RAW在保留拍摄信息时导出失败。已确认的例子为`GPSMeasureMode=0`：旧版将对应的轻微元数据警告作为导出失败。1.2只在新输出中省略此未定义字段，保留有效的2D/3D值和其他正常GPS、拍摄时间、曝光与镜头信息；原片保持不变。并非所有带GPS的相机或照片都会出错。像素回读和文件结构校验继续执行。
+- 每次通过来源菜单显式选择“RGB 响应混合”时，先说明用途并由用户确认。确认前不改变设置；取消保留当前响应。载入预设或切换已配置照片时不重复弹窗，混合面板持续提示与绿色参考对照。
+- RGB混合用于自定义不同颜色在单色结果中的明暗贡献，调整比例会改变相对明暗与影调，可能偏离默认绿色参考。两条路径均未标定为某款实体MONOCHROME相机，单色传感器也没有唯一统一的光谱响应。常规重建建议先使用绿色响应，明确需要改变哪些颜色的明暗时再尝试RGB混合。
 
 ## 当前功能
 
@@ -97,7 +103,7 @@ LMMSE出处：Lei Zhang、Xiaolin Wu，IEEE TIP 2005，DOI [10.1109/TIP.2005.857
 
 目标平台：**Apple Silicon、macOS 14 及以上**。构建需要支持源码所用 SwiftUI API 的 Xcode / SDK；macOS 26 的玻璃 API 有运行时可用性检查。最低系统声明不等于所有系统版本均已真机验证。
 
-直接使用请前往 [Releases](https://github.com/easonzhangbin/toMONO/releases/tag/v1.1.0) 下载 `.dmg`，打开后将 toMONO 拖入“应用程序”。本地构建包为 ad-hoc 签名，尚未完成 Apple Developer ID 签名和公证，首次打开可能被 Gatekeeper 阻止。开发者可按下列步骤从源码构建。
+直接使用请前往 [Releases](https://github.com/easonzhangbin/toMONO/releases/tag/v1.2.0) 下载 `.dmg`，打开后将 toMONO 拖入“应用程序”。本地构建包为 ad-hoc 签名，尚未完成 Apple Developer ID 签名和公证，首次打开可能被 Gatekeeper 阻止。开发者可按下列步骤从源码构建。
 
 ```sh
 git clone https://github.com/easonzhangbin/toMONO.git

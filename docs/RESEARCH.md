@@ -1,6 +1,6 @@
 # 技术与研究出处
 
-此页由应用内 `ResearchReferences.json` 整理，对应1.1正式版（构建15）。历史实验条目仅记录研究脉络，不表示权重或数据已随仓库发布。
+此页由应用内 `ResearchReferences.json` 整理，对应1.2正式版（构建16）；本次元数据修复与RGB用途提示沿用1.1的重建核心。历史实验条目仅记录研究脉络，不表示权重或数据已随仓库发布。
 
 启动版本检查使用[GitHub官方Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)，通过Apple URLSession异步读取正式Release元数据；不发送照片或本机路径，不自动安装。
 

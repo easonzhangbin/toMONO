@@ -77,9 +77,62 @@ struct DetailComputationControls: View {
     }
 }
 
+/// Captures the photo and response before a user asks to enter RGB mixing.
+/// A delayed confirmation must never change another photo or a restored preset.
+struct RGBMixSelectionRequest: Identifiable {
+    let photoID: UUID
+    let responseMode: String
+    var id: UUID { photoID }
+
+    func matches(photoID: UUID?, responseMode: String) -> Bool {
+        self.photoID == photoID && self.responseMode == responseMode
+    }
+}
+
+enum RGBMixExplanation {
+    static let title = "RGB 响应混合会改变影调"
+    static let message = "RGB 响应混合用于自定义不同颜色在单色结果中的明暗贡献。调整红、绿、蓝比重会改变相对明暗与影调，结果可能偏离默认绿色参考。\n\n绿色参考与 RGB 混合均未标定为某款实体 MONOCHROME 相机；不同单色传感器也有不同的光谱响应。\n\n常规单色重建建议先使用绿色响应，并保留它作对照；明确希望改变哪些颜色的明暗时，再尝试 RGB 混合。"
+    static let inlineSummary = "自定义影调：改变各颜色的明暗贡献。建议与绿色参考对照；RGB 比重复位并不会恢复绿色响应。"
+}
+
+@MainActor final class RGBMixNoticeController: ObservableObject {
+    @Published private(set) var request: RGBMixSelectionRequest?
+    @Published var isPresented = false
+
+    func select(_ mode: String, model: AppModel) {
+        guard let item=model.selected,mode != model.recipe.response_mode else { return }
+        if mode == "mix" {
+            request=RGBMixSelectionRequest(photoID:item.id,responseMode:model.recipe.response_mode)
+            isPresented=true
+        } else {
+            cancel()
+            model.recipe.response_mode=mode
+        }
+    }
+    func confirm(_ request: RGBMixSelectionRequest, model: AppModel) {
+        guard request.matches(photoID:model.selected?.id,responseMode:model.recipe.response_mode) else {
+            cancel();return
+        }
+        model.recipe.response_mode="mix"
+        cancel()
+    }
+    func cancel() {
+        isPresented=false
+        request=nil
+    }
+    func dismissIfStale(model: AppModel) {
+        if let request,!request.matches(photoID:model.selected?.id,responseMode:model.recipe.response_mode) { cancel() }
+    }
+}
+
 struct ResponseControls: View {
     @ObservedObject var model: AppModel
     @State private var showHelp = false
+    @StateObject private var rgbNotice: RGBMixNoticeController
+    @MainActor init(model: AppModel, noticeController: RGBMixNoticeController?=nil) {
+        self.model=model
+        _rgbNotice=StateObject(wrappedValue:noticeController ?? RGBMixNoticeController())
+    }
     private var defaults: RecipeDocument { RecipeDocument() }
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
@@ -103,12 +156,13 @@ struct ResponseControls: View {
                 Text("仅调整当前照片：\(item.url.lastPathComponent)")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
             } else { Text("选择照片后可独立调整响应").font(.caption).foregroundStyle(.secondary) }
-            Picker("重建来源",selection:$model.recipe.response_mode) {
+            Picker("重建来源",selection:Binding(get:{ model.recipe.response_mode },set:{ rgbNotice.select($0,model:model) })) {
                 Text(model.recipe.usesLegacyDetail ? "绿色参考（原有模式）" : "绿色响应").tag("green")
                 Text("RGB 响应混合").tag("mix")
                 if model.recipe.response_mode.hasPrefix("narrow_") { Text("使用下方窄带响应").tag(model.recipe.response_mode) }
             }.labelsHidden().accessibilityLabel("单色重建来源")
             if model.recipe.response_mode == "mix" {
+                Text(RGBMixExplanation.inlineSummary).font(.caption).foregroundStyle(.secondary)
                 responseSlider("红色比重",value:$model.recipe.response_red,defaultValue:defaults.response_red,color:.red)
                 responseSlider("绿色比重",value:$model.recipe.response_green,defaultValue:defaults.response_green,color:.green)
                 responseSlider("蓝色比重",value:$model.recipe.response_blue,defaultValue:defaults.response_blue,color:.blue)
@@ -148,6 +202,12 @@ struct ResponseControls: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
         }.disabled(model.selected==nil)
+            .alert(RGBMixExplanation.title,isPresented:$rgbNotice.isPresented,presenting:rgbNotice.request) { request in
+                Button("保留当前响应",role:.cancel,action:rgbNotice.cancel)
+                Button("了解，使用 RGB 混合") { rgbNotice.confirm(request,model:model) }
+            } message: { _ in Text(RGBMixExplanation.message) }
+            .onChange(of:model.selection) { _,_ in rgbNotice.dismissIfStale(model:model) }
+            .onChange(of:model.recipe.response_mode) { _,_ in rgbNotice.dismissIfStale(model:model) }
     }
     private var responseWeightsAreDefault: Bool {
         model.recipe.response_red == defaults.response_red &&
