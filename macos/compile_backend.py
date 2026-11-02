@@ -4,7 +4,7 @@ from pathlib import Path
 from setuptools import Extension,Distribution
 from Cython.Build import cythonize
 
-MODULES=['conversion_service','recipe','metadata_params','raw_input','dng_reader','dng_layout','dng_writer','display_render','execution_log','defect_map','lens_correction','channel_response','pure_narrowband','detail_reconstruction']
+MODULES=['conversion_service','recipe','metadata_params','raw_input','dng_reader','dng_layout','dng_writer','display_render','execution_log','defect_map','lens_correction','channel_response','pure_narrowband','detail_reconstruction','lmmse_reconstruction','preview_inspection']
 ENTRY={'tomono_worker':'tomono_cli','tomono_preview':'monochrome_preview'}
 
 def build(source,destination,work):

@@ -3,3 +3,6 @@
 *.py text eol=lf
 *.swift text eol=lf
 *.png binary
+# Preserve the original upstream reference code and license bytes.
+portable/src/lmmse/** -text -whitespace
+macos/assets/licenses/IPOL-LMMSE-BSD-2-Clause.txt -text -whitespace

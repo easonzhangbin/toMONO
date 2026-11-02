@@ -134,8 +134,8 @@ def compute_pure_narrowband(source,recipe,progress=None):
         source_black_levels_2x2=blacks.tolist(),source_white_levels_2x2=whites.tolist(),
         pattern=pattern.tolist(),normalization=[],green_compensation=0.,green_replacements=0,
         green_correction_policy='Not applied in strict narrowband; no R/B-guided G correction',
-        defect_repair=defect,response=response,cpu_workers=int(native_core().tomono_worker_count()) if recipe.detail_mode=='legacy' else 1,
-        acceleration='Deterministic CPU row strips' if recipe.detail_mode=='legacy' else 'NumPy compact FIR FFT tiles and precompiled deterministic CPU detail kernel;48px halo',
+        defect_repair=defect,response=response,cpu_workers=int(native_core().tomono_worker_count()) if recipe.detail_mode=='legacy' else detail_stats['cpu_workers'],
+        acceleration='Deterministic CPU row strips' if recipe.detail_mode=='legacy' else 'Bounded multicore NumPy FIR FFT tiles with cached kernel spectra; deterministic 48px halos',
         measured_samples='Normalized selected sites preserved before optional target defect repair/explicit EV; final DN may change with container scale',
         physical_caveat='Sensor spectral overlap is physical and is not removed by digital site selection')
     parameters.update(requested_detail_mode=recipe.detail_mode,effective_detail_mode=recipe.detail_mode,

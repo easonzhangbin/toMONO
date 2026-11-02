@@ -12,10 +12,18 @@ class RecipeTests(unittest.TestCase):
     def test_rejects_unknown_or_invalid_parameters(self):
         for fields in ({'algorithm':'VNG'},{'compensation':float('nan')},{'version':3},{'focus_red':1},{'green_mode':'other'},{'typo':5},{'detail_mode':'RGB-guided'},{'detail_mode':None}):
             with self.assertRaises(ValueError):Recipe.from_dict(fields)
-    def test_new_defaults_and_explicit_v2_use_spectral(self):
-        self.assertEqual((Recipe().version,Recipe().detail_mode),(2,'spectral'))
+    def test_new_defaults_use_d10_without_changing_saved_v2_migration(self):
+        self.assertEqual((Recipe().version,Recipe().detail_mode),(2,'directional'))
         self.assertEqual(Recipe.from_dict({'version':2}).detail_mode,'spectral')
         self.assertEqual(Recipe.from_dict(Recipe().to_dict()),Recipe())
+    def test_lmmse_is_available_only_for_ordinary_responses(self):
+        for response in ('green','mix'):
+            r=Recipe.from_dict({'version':2,'detail_mode':'lmmse','response_mode':response})
+            self.assertEqual((r.detail_mode,r.response_mode),('lmmse',response))
+            self.assertEqual(Recipe.from_dict(r.to_dict()),r)
+        for response in ('narrow_red','narrow_green','narrow_blue'):
+            with self.assertRaisesRegex(ValueError,'不能用于窄带独立纯通道'):
+                Recipe.from_dict({'version':2,'detail_mode':'lmmse','response_mode':response})
     def test_old_recipes_migrate_without_changing_their_interpolation(self):
         for data in ({},{'version':1},{'algorithm':'EdgeAware','narrow_interpolation':'linear'}):
             migrated=Recipe.from_dict(data)
@@ -59,7 +67,7 @@ class SaveStatusTests(unittest.TestCase):
             saved=json.loads((Path(d)/'report.json').read_text())
             self.assertTrue(result['sidecar_saved']);self.assertTrue(saved['sidecar_saved'])
             self.assertEqual(saved['recipe']['version'],2)
-            self.assertEqual(saved['recipe']['detail_mode'],'spectral')
+            self.assertEqual(saved['recipe']['detail_mode'],'directional')
             self.assertEqual(list(Path(d).glob('.tomono-*')),[])
     def test_failed_report_serialization_leaves_no_partial_file(self):
         with tempfile.TemporaryDirectory() as d:

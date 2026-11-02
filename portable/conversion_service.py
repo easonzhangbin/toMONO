@@ -14,6 +14,9 @@ class Cancelled(Exception):pass
 def _compute_detail_response(mosaic,pattern,blacks,whites,black,white,frame,m,parameters,structure,active,recipe,progress):
     from channel_response import response_weights
     from detail_reconstruction import reconstruct_response,method_info
+    if recipe.detail_mode=='lmmse':
+        from lmmse_reconstruction import reconstruct_response,method_info
+    same_colour=recipe.detail_mode!='lmmse'
     p=np.asarray(pattern,np.uint8);weights=response_weights(recipe);targets=[int(t) for t in np.flatnonzero(weights)]
     defects=[]
     for target in targets:
@@ -25,8 +28,8 @@ def _compute_detail_response(mosaic,pattern,blacks,whites,black,white,frame,m,pa
         black,white,recipe.response_exposure,progress,green_correction=parameters,
         defer_quantization=recipe.lens_correction is not None)
     response=dict(mode=recipe.response_mode,weights=weights.tolist(),exposure_ev=recipe.response_exposure,
-        applied=True,reference_exact=False,selected_kernel_same_colour=True,
-        digital_channel_isolation=bool(len(targets)==1 and not parameters.get('green_compensation',0)),
+        applied=True,reference_exact=False,selected_kernel_same_colour=same_colour,
+        digital_channel_isolation=bool(same_colour and len(targets)==1 and not parameters.get('green_compensation',0)),
         channel_method=method_info(recipe.detail_mode)['code']+' '+recipe.detail_mode,
         normalization='Per-phase float64(DN-black)/(white-black); selected corrections before interpolation; no WB or automatic exposure',
         quantization='Float channel reconstruction and float64 measured restoration/mixing; explicit EV; one final rint',
@@ -45,11 +48,11 @@ def _compute_detail_response(mosaic,pattern,blacks,whites,black,white,frame,m,pa
         requested_algorithm=recipe.algorithm,source_active_area=list(active),output_black=black,output_white=white,
         source_black_levels_2x2=np.asarray(blacks).tolist(),source_white_levels_2x2=np.asarray(whites).tolist(),
         pattern=p.tolist(),normalization=[],defect_repair=defect,response=response,
-        green_replacements=changed,cpu_workers=1,acceleration='NumPy compact FIR FFT tiles and precompiled deterministic CPU detail kernel;48px halo',
+        green_replacements=changed,cpu_workers=stats['cpu_workers'],acceleration=('Bounded multicore official IPOL LMMSE tiles; deterministic 16px halos' if not same_colour else 'Bounded multicore NumPy FIR FFT tiles with cached kernel spectra; deterministic 48px halos'),
         green_correction_policy='Selected G-difference policy on normalized float64 observations before kernels; optional R/B eligibility gate is explicit preprocessing' if parameters.get('green_compensation',0) else 'Off',
         measured_samples='Selected observations after explicit defect/G correction hard-restored in float64 before mixing/EV; one final container quantization',
-        research_condition_difference='Frozen research disabled defect/G/lens corrections. Product uses the selected recipe corrections; interpolation remains same-colour.',
-        scope='Linear same-colour detail reconstruction; no Nyquist-exceeding recovery or physical spectral-unmixing claim')
+        research_condition_difference='Frozen research disabled defect/G/lens corrections. Product uses the selected recipe corrections.',
+        scope=('Experimental cross-colour LMMSE; all CFA colours guide estimates; ordinary photos only' if not same_colour else 'Linear same-colour detail reconstruction; no Nyquist-exceeding recovery or physical spectral-unmixing claim'))
     return pixels,m,parameters,dict(structure,active_area=[0,0,h,w]),changed,frame
 
 def _compute_sensor_monochrome(source,recipe=None,progress=None,diagnostics=False):
@@ -214,7 +217,6 @@ def compute_monochrome(source,recipe=None,progress=None,diagnostics=False):
         def checkpoint():
             if progress:progress({'type':'progress','phase':'统计原始RGB采样','progress':.59})
         parameters['raw_histogram']=raw_channel_histogram(frame,metadata,structure,checkpoint)
-    del frame
     parameters['green_replacements']=int(changed)
     parameters['reconstruction_sample_count']=int(pixels.size)
     parameters['lens_capture']=structure.get('lens_metadata',{})
@@ -237,7 +239,38 @@ def compute_monochrome(source,recipe=None,progress=None,diagnostics=False):
                 parameters['response'].update(container_clipped_low=low,container_clipped_high=high)
                 if low or high:parameters['response']['warnings'].append(f'最终输出有{low+high}个采样超出16位容器，已限制到可存储范围。')
         event('lens_correction_complete',parameters=parameters.get('lens_correction'))
+    if diagnostics:
+        parameters['inspection_regions']=_preview_inspection(frame,metadata,parameters,structure,recipe)
+    del frame
     return pixels,metadata,parameters,structure,changed
+
+def _preview_inspection(frame,metadata,parameters,structure,recipe):
+    """Source-based inspection suggestions; never a pixel correction."""
+    from preview_inspection import inspection_regions
+    orientation=int(structure.get('Orientation',1))
+    cw,ch=map(int,structure['crop_size'])
+    size=[ch,cw] if orientation>=5 else [cw,ch]
+    def center():
+        w,h=min(192,size[0]),min(192,size[1])
+        return dict(version=1,source='output_centre',native_size=size,
+                    regions=[dict(rect=[(size[0]-w)//2,(size[1]-h)//2,w,h],reason='画面中心',score=0)])
+    m=frame.metadata;p=m.get('cfa_codes_full_origin')
+    if (m.get('linear_reconstruction') or not p or np.shape(p)!=(2,2)
+            or parameters.get('lens_correction',{}).get('applied')):return center()
+    channels=np.asarray(m['cfa_libraw_channels_full_origin']);blacks=np.asarray(m['black_level_by_libraw_channel'],float)[channels]
+    whites=np.asarray(m.get('white_level_by_libraw_channel') or [m['white_level']]*4,float)[channels]
+    whites=np.where(np.isfinite(whites)&(whites>blacks),whites,m['white_level'])
+    source_active=parameters.get('source_active_area') or metadata.get('source_active_area') or _source_visible_active(frame)
+    top,left=map(int,source_active[:2]);x,y=map(int,structure['crop_origin'])
+    target={'narrow_red':0,'narrow_green':1,'narrow_blue':2}.get(recipe.response_mode,1)
+    if recipe.response_mode=='mix' and not recipe.response_green:target=0 if recipe.response_red>=recipe.response_blue else 2
+    try:return inspection_regions(frame.samples,np.asarray(p),blacks,whites,crop=(left+x,top+y,cw,ch),orientation=orientation,target=target)
+    except ValueError as exc:
+        event('preview_inspection_fallback',reason=str(exc));return center()
+
+def _source_visible_active(frame):
+    visible=frame.metadata['visible_area']
+    return [visible['top'],visible['left'],visible['top']+visible['height'],visible['left']+visible['width']]
 
 def convert_and_save(source,output,recipe=None,report_path=None,progress=None):
     source=Path(source).resolve();output=Path(output).resolve()

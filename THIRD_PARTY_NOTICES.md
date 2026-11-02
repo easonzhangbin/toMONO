@@ -22,4 +22,12 @@
 
 更多论文、算法与库的采用关系见 [研究出处](docs/RESEARCH.md)。引用不表示附带授权、复现成功、性能达标或厂商认可。历史研究中的学习模型未纳入当前产品路径。
 
+## IPOL Zhang–Wu LMMSE（普通照片实验选项）
+
+原始方向 LMMSE 方法：Lei Zhang 与 Xiaolin Wu，IEEE TIP 2005，[DOI 10.1109/TIP.2005.857260](https://doi.org/10.1109/TIP.2005.857260)。本项目使用 Pascal Getreuer 的 [IPOL 2011 参考实现 v1.1](https://www.ipol.im/pub/art/2011/g_zwld/)（DOI 10.5201/ipol.2011.g_zwld）。
+
+`portable/src/lmmse/` 中保留的官方文件按字节原样保存；归档 SHA-256 为 `1c401a9e4473e90e1205d821b89264171a3f68ae5a27c0855098485a7e71de4d`。实际文件的 BSD-2-Clause 许可与版权见 [原始许可](portable/src/lmmse/bsd-license.txt)，副本随应用组件声明收集。C ABI、分块、实测采样恢复与单色响应包装属于本项目。论文存档文本的许可与代码许可分别记录。
+
+LMMSE 借助所有 CFA 颜色估算缺失采样，只用于普通绿色响应 / RGB 混合；严格窄带纯通道不能选用。局部检查仅提示便于观察的区域，没有使用尚未通过验证的自动混合算法。
+
 Release 随测试 DMG 提供对应项目源码和第三方源码材料，包括 LibRaw、Lensfun 及数据库、GLib、gettext/libintl、构建依赖、接口封装与实际 ExifTool Perl 源码。固定版本、上游来源和 SHA-256 见 [发布依赖清单](docs/RELEASE_DEPENDENCIES.json)，相关归档保留各自许可。rawpy 轮子未启用 GPL demosaic packs。其他运行时的许可和组件声明保留在应用内；不把这些材料称为整套环境逐字节可复现的证明。

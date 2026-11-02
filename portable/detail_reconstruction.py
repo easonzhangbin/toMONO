@@ -20,6 +20,9 @@ from __future__ import annotations
 
 import ctypes
 import functools
+import os
+from concurrent.futures import ThreadPoolExecutor
+from collections import deque
 from pathlib import Path
 
 import numpy as np
@@ -117,13 +120,20 @@ def _spectral_kernel(green):
     return k, phase_dc
 
 
-def _fft_convolve_valid(data, kernel):
+@functools.lru_cache(maxsize=8)
+def _kernel_spectrum(green, shape):
+    result=np.fft.rfft2(_spectral_kernel(green)[0],s=shape)
+    result.setflags(write=False)
+    return result
+
+
+def _fft_convolve_valid(data, kernel, green):
     # The distributable worker requires only NumPy. These FFTs evaluate the
     # frozen compact FIR; no whole-frame transform or runtime compiler is used.
     shape = tuple(a+b-1 for a, b in zip(data.shape, kernel.shape))
     shape = tuple(1 << (n-1).bit_length() for n in shape)
     full = np.fft.irfft2(np.fft.rfft2(data, s=shape) *
-                        np.fft.rfft2(kernel, s=shape), s=shape)
+                        _kernel_spectrum(green, shape), s=shape)
     sy, sx = kernel.shape[0]-1, kernel.shape[1]-1
     return full[sy:data.shape[0], sx:data.shape[1]]
 
@@ -141,7 +151,7 @@ def _spectral(sparse, phase_y, phase_x, green):
         for x in range(0, w, SPECTRAL_TILE):
             sx = min(SPECTRAL_TILE, w-x)
             tile = padded[y:y+sy+2*r, x:x+sx+2*r]
-            out = _fft_convolve_valid(tile, kernel)
+            out = _fft_convolve_valid(tile, kernel, green)
             for oy in range(2):
                 for ox in range(2):
                     denominator = dc[(y+oy-phase_y) % 2, (x+ox-phase_x) % 2]
@@ -303,7 +313,7 @@ def _correct_green_normalized(values, black, white, settings, progress=None):
 
 def reconstruct_response(samples, pattern, blacks, whites, weights, method,
                          black, white, exposure_ev=0., progress=None,
-                         green_correction=None, tile_size=512, defer_quantization=False):
+                         green_correction=None, tile_size=512, defer_quantization=False, workers=None):
     """Prepare selected CFA phases, reconstruct/mix in float, round exactly once.
 
     ``samples`` is a private uint16 sensor buffer after explicitly selected
@@ -351,35 +361,69 @@ def reconstruct_response(samples, pattern, blacks, whites, weights, method,
                quantization_deferred_for_lens=bool(defer_quantization),
                pre_lens_out_of_container_low=0,pre_lens_out_of_container_high=0)
     tiles=((h+tile_size-1)//tile_size)*((width+tile_size-1)//tile_size)
-    completed=0;gain=2.**float(exposure_ev);span=white-black;halo=SPECTRAL_RADIUS
-    for y in range(0,h,tile_size):
+    gain=2.**float(exposure_ev);span=white-black;halo=SPECTRAL_RADIUS
+    count = int(os.environ.get('TOMONO_DETAIL_WORKERS', min(4,max(1,(os.cpu_count() or 2)//2)))) if workers is None else workers
+    if isinstance(count,bool) or not isinstance(count,int) or not 1<=count<=8:
+        raise ValueError('细节线程数须为1至8')
+    count=min(count,tiles)
+    stats['cpu_workers']=count
+    coordinates=((y,x) for y in range(0,h,tile_size) for x in range(0,width,tile_size))
+
+    def evaluate(coordinate):
+        y,x=coordinate
         sy=min(tile_size,h-y);y0=max(0,y-halo);y1=min(h,y+sy+halo)
-        for x in range(0,width,tile_size):
-            sx=min(tile_size,width-x);x0=max(0,x-halo);x1=min(width,x+sx+halo)
-            local_pattern=p[(np.arange(2)+y0)[:,None]%2,(np.arange(2)+x0)[None,:]%2]
-            mixed=np.zeros((sy,sx),np.float64)
-            for index,target in enumerate(targets):
-                _notify(progress,'重建所选同色细节',.43+.15*(completed+index/len(targets))/tiles)
-                signal=reconstruct(normalized[y0:y1,x0:x1],local_pattern,target,method,noise_sigma=0.)
-                block=signal[y-y0:y-y0+sy,x-x0:x-x0+sx].astype(np.float64)
-                for py,px in np.argwhere(p==target):
-                    oy=(int(py)-y)%2;ox=(int(px)-x)%2
-                    measured=normalized[y+oy:y+sy:2,x+ox:x+sx:2]
-                    delta=np.abs(block[oy::2,ox::2]-measured)
-                    stats['kernel_measured_max_float32_error']=max(stats['kernel_measured_max_float32_error'],float(delta.max(initial=0)))
-                    block[oy::2,ox::2]=measured
-                mixed+=weights[target]*block
-            mapped=black+mixed*(span*gain)
-            if defer_quantization:
-                stats['pre_lens_out_of_container_low']+=int(np.count_nonzero(mapped<0))
-                stats['pre_lens_out_of_container_high']+=int(np.count_nonzero(mapped>65535))
-            else:
-                mapped=np.rint(mapped)
-                stats['container_clipped_low']+=int(np.count_nonzero(mapped<0))
-                stats['container_clipped_high']+=int(np.count_nonzero(mapped>65535))
-            stats['at_or_above_white']+=int(np.count_nonzero(mapped>=white))
-            stats['below_recorded_black']+=int(np.count_nonzero(mapped<black))
-            pixels[y:y+sy,x:x+sx]=mapped if defer_quantization else np.clip(mapped,0,65535).astype(np.uint16)
-            completed+=1
+        sx=min(tile_size,width-x);x0=max(0,x-halo);x1=min(width,x+sx+halo)
+        local_pattern=p[(np.arange(2)+y0)[:,None]%2,(np.arange(2)+x0)[None,:]%2]
+        mixed=np.zeros((sy,sx),np.float64);local_stats={key:0 for key in stats}
+        for target in targets:
+            signal=reconstruct(normalized[y0:y1,x0:x1],local_pattern,target,method,noise_sigma=0.)
+            block=signal[y-y0:y-y0+sy,x-x0:x-x0+sx].astype(np.float64)
+            for py,px in np.argwhere(p==target):
+                oy=(int(py)-y)%2;ox=(int(px)-x)%2
+                measured=normalized[y+oy:y+sy:2,x+ox:x+sx:2]
+                delta=np.abs(block[oy::2,ox::2]-measured)
+                local_stats['kernel_measured_max_float32_error']=max(local_stats['kernel_measured_max_float32_error'],float(delta.max(initial=0)))
+                block[oy::2,ox::2]=measured
+            mixed+=weights[target]*block
+        mapped=black+mixed*(span*gain)
+        if defer_quantization:
+            local_stats['pre_lens_out_of_container_low']=int(np.count_nonzero(mapped<0))
+            local_stats['pre_lens_out_of_container_high']=int(np.count_nonzero(mapped>65535))
+        else:
+            mapped=np.rint(mapped)
+            local_stats['container_clipped_low']=int(np.count_nonzero(mapped<0))
+            local_stats['container_clipped_high']=int(np.count_nonzero(mapped>65535))
+        local_stats['at_or_above_white']=int(np.count_nonzero(mapped>=white))
+        local_stats['below_recorded_black']=int(np.count_nonzero(mapped<black))
+        return y,x,mapped if defer_quantization else np.clip(mapped,0,65535).astype(np.uint16),local_stats
+
+    def commit(results):
+        for completed,(y,x,block,local) in enumerate(results,1):
+            pixels[y:y+block.shape[0],x:x+block.shape[1]]=block
+            for key in ('container_clipped_low','container_clipped_high','at_or_above_white','below_recorded_black','pre_lens_out_of_container_low','pre_lens_out_of_container_high'):
+                stats[key]+=local[key]
+            stats['kernel_measured_max_float32_error']=max(stats['kernel_measured_max_float32_error'],local['kernel_measured_max_float32_error'])
+            _notify(progress,'重建所选同色细节',.43+.15*completed/tiles)
+
+    if count==1:
+        commit(map(evaluate,coordinates))
+    else:
+        # NumPy FFT releases the GIL. Workers read shared normalized data and
+        # return disjoint core tiles; only this caller writes pixels and stats.
+        # Bound outstanding tiles, rather than eagerly queuing a whole frame.
+        with ThreadPoolExecutor(max_workers=count,thread_name_prefix='tomono-detail') as pool:
+            pending=deque()
+            def results():
+                for _ in range(count*2):
+                    coordinate=next(coordinates,None)
+                    if coordinate is None:break
+                    pending.append(pool.submit(evaluate,coordinate))
+                while pending:
+                    yield pending.popleft().result()
+                    coordinate=next(coordinates,None)
+                    if coordinate is not None:pending.append(pool.submit(evaluate,coordinate))
+            try:commit(results())
+            finally:
+                for task in pending:task.cancel()
     _notify(progress,'同色细节重建完成',.58)
     return pixels,stats,green_changed

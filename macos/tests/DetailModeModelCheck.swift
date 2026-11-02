@@ -15,7 +15,7 @@ import AppKit
     }
     static func main() throws {
         let initial=RecipeDocument()
-        try require(initial.version==2 && initial.detail_mode=="spectral" && initial.responseValid,"新设置未默认C01")
+        try require(initial.version==2 && initial.detail_mode=="directional" && initial.responseValid,"新设置未默认D10")
         let legacy=try decode("{\"version\":1,\"algorithm\":\"EdgeAware\",\"narrow_interpolation\":\"linear\",\"response_mode\":\"narrow_blue\"}")
         try require(legacy.version==2 && legacy.detail_mode=="legacy" && legacy.algorithm=="EdgeAware" && legacy.narrow_interpolation=="linear" && legacy.response_mode=="narrow_blue","旧设置迁移改动重建语义")
         let unversioned=try decode("{\"algorithm\":\"Bicubic\"}")
@@ -31,14 +31,18 @@ import AppKit
             throw NSError(domain:"未知版本未拒绝",code:2)
         } catch is DecodingError { }
         var fingerprints=Set<Data>()
-        for mode in ["spectral","spectral_guard","directional","legacy"] {
+        for mode in ["spectral","spectral_guard","directional","lmmse","legacy"] {
             var r=initial;r.detail_mode=mode;r.response_mode="mix";r.response_exposure=0.35
             let bytes=try encoded(r)
             let loaded=try JSONDecoder().decode(RecipeDocument.self,from:bytes)
             try require(loaded==r,"细节模式未完整预设往返："+mode)
             fingerprints.insert(bytes)
         }
-        try require(fingerprints.count==4,"完整recipe缓存负载没有区分细节模式")
+        try require(fingerprints.count==5,"完整recipe缓存负载没有区分细节模式")
+        for response in ["narrow_red","narrow_green","narrow_blue"] {
+            var invalidNarrow=initial;invalidNarrow.detail_mode="lmmse";invalidNarrow.response_mode=response
+            try require(!invalidNarrow.responseValid,"LMMSE被允许进入独立纯通道")
+        }
         var narrow=initial;narrow.detail_mode="spectral_guard";narrow.response_mode="narrow_blue";narrow.response_exposure=1.15
         let reference=narrow.greenReferenceRecipe
         try require(reference.detail_mode=="legacy" && reference.response_mode=="green" && reference.response_exposure==0,"对照没有使用旧绿色重建")
@@ -47,7 +51,7 @@ import AppKit
         saved.output=URL(fileURLWithPath:"/tmp/detail-mode-state-only.dng")
         saved.outputRecipe=saved.settings;saved.status="已保存"
         try require(saved.displayStatus=="已保存","初始保存状态不正确")
-        saved.settings.detail_mode="directional"
+        saved.settings.detail_mode="spectral"
         try require(saved.displayStatus=="已修改","切换细节模式没有使保存状态失效")
         saved.settings=saved.outputRecipe!
         try require(saved.displayStatus=="已保存","恢复保存时模式未恢复保存状态")
@@ -56,6 +60,6 @@ import AppKit
         let queued=[saved.settings,second.settings]
         saved.settings.detail_mode="spectral"
         try require(queued[0].detail_mode=="spectral_guard" && queued[1].detail_mode=="directional" && second.settings.detail_mode=="directional","逐张设置或导出值快照发生串扰")
-        print("{\"default_C01\":true,\"recipe_v1_migration\":true,\"unversioned_migration\":true,\"v2_default\":true,\"explicit_mode_preserved\":true,\"unknown_mode_rejected\":true,\"unknown_version_rejected\":true,\"preset_roundtrip_modes\":4,\"distinct_preview_payloads\":4,\"legacy_reference_recipe\":true,\"reference_keeps_export_settings\":true,\"saved_state_invalidates\":true,\"per_photo_value_snapshots\":true,\"windows_opened\":0}")
+        print("{\"default_D10\":true,\"recipe_v1_migration\":true,\"unversioned_migration\":true,\"v2_default\":true,\"explicit_mode_preserved\":true,\"unknown_mode_rejected\":true,\"unknown_version_rejected\":true,\"preset_roundtrip_modes\":5,\"distinct_preview_payloads\":5,\"lmmse_ordinary_only\":true,\"legacy_reference_recipe\":true,\"reference_keeps_export_settings\":true,\"saved_state_invalidates\":true,\"per_photo_value_snapshots\":true,\"windows_opened\":0}")
     }
 }

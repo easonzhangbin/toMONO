@@ -6,7 +6,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class Recipe:
     version:int=2
-    detail_mode:str='spectral'
+    detail_mode:str='directional'
     algorithm:str='Bicubic'
     green_mode:str='auto'
     compensation:float=1.231
@@ -36,9 +36,10 @@ class Recipe:
         if 'detail_mode' not in data:data['detail_mode']='legacy' if version==1 else 'spectral'
         data['version']=2
         r=cls(**data)
-        if r.detail_mode not in ('spectral','spectral_guard','directional','legacy'):raise ValueError('细节模式无效')
+        if r.detail_mode not in ('spectral','spectral_guard','directional','lmmse','legacy'):raise ValueError('细节模式无效')
         if r.algorithm not in ('Bicubic','EdgeAware','Auto'):raise ValueError('算法必须为Bicubic、EdgeAware或Auto')
         if r.response_mode not in ('green','mix','narrow_red','narrow_green','narrow_blue'):raise ValueError('单色响应模式无效')
+        if r.detail_mode=='lmmse' and r.response_mode.startswith('narrow_'):raise ValueError('LMMSE会使用其他颜色采样，不能用于窄带独立纯通道；请选择方向自适应、频域精细或频域限幅')
         if r.narrow_interpolation not in ('cubic','linear'):raise ValueError('纯通道插值必须为cubic或linear')
         for key in ('response_red','response_green','response_blue'):
             v=getattr(r,key)

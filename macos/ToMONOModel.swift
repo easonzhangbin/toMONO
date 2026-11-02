@@ -27,7 +27,7 @@ struct DefectProfile: Codable, Equatable {
 }
 struct RecipeDocument: Codable, Equatable {
     var version = 2
-    var detail_mode = "spectral"
+    var detail_mode = "directional"
     var algorithm = "Bicubic"
     var green_mode = "auto"
     var compensation = 1.231
@@ -47,9 +47,9 @@ struct RecipeDocument: Codable, Equatable {
     var response_exposure = 0.0
     var narrow_interpolation = "cubic"
     var usesLegacyDetail: Bool { detail_mode == "legacy" }
-    var detailModeValid: Bool { ["spectral","spectral_guard","directional","legacy"].contains(detail_mode) }
+    var detailModeValid: Bool { ["spectral","spectral_guard","directional","lmmse","legacy"].contains(detail_mode) }
     static func detailTitle(_ mode: String) -> String {
-        ["spectral":"频域精细","spectral_guard":"频域限幅","directional":"方向自适应","legacy":"原有模式（旧预设）"][mode] ?? "其他采样重建"
+        ["spectral":"频域精细","spectral_guard":"频域限幅","directional":"方向自适应","lmmse":"LMMSE 统计重建","legacy":"原有模式（旧预设）"][mode] ?? "其他采样重建"
     }
     var detailModeTitle: String { Self.detailTitle(detail_mode) }
     var detailModeDescription: String {
@@ -57,6 +57,7 @@ struct RecipeDocument: Codable, Equatable {
         case "spectral": return "优先保留细密织纹与细线；高反差边缘可能振铃，暗部噪声也可能更明显。"
         case "spectral_guard": return "在频域重建后限制局部极值，减少过冲；部分纹理可能产生格点偏差。"
         case "directional": return "按局部方向可靠性补齐绿色采样；红蓝使用同色三次，周期织纹仍可能退化。"
+        case "lmmse": return "实验：借助 RGB 颜色差与局部统计重建；可改善部分边缘，但强色彩纹理可能串入，仍可能过冲。不用于窄带纯通道。"
         default: return "保留旧设置中的绿色插值或窄带同色插值，用于重现之前的结果。"
         }
     }
@@ -70,7 +71,7 @@ struct RecipeDocument: Codable, Equatable {
     var isNarrowband: Bool { response_mode.hasPrefix("narrow_") }
     var narrowChannel: String? { ["narrow_red":"R","narrow_green":"G","narrow_blue":"B"][response_mode] }
     var responseValid: Bool {
-        detailModeValid && ["green","mix","narrow_red","narrow_green","narrow_blue"].contains(response_mode) &&
+        detailModeValid && !(detail_mode == "lmmse" && narrowChannel != nil) && ["green","mix","narrow_red","narrow_green","narrow_blue"].contains(response_mode) &&
         ["cubic","linear"].contains(narrow_interpolation) &&
         [response_red,response_green,response_blue].allSatisfy { $0.isFinite && (0...1).contains($0) } &&
         response_exposure.isFinite && (-6...6).contains(response_exposure) &&
@@ -128,6 +129,25 @@ struct InputItem: Identifiable {
     var displayDetail:String { displayStatus == "已修改" ? "当前照片设置尚未导出；上次保存的结果仍保留。" : detail }
 }
 
+enum ExportLocation: String, CaseIterable, Identifiable {
+    case chosenFolder, besideOriginal
+    var id: String { rawValue }
+    var title: String { self == .chosenFolder ? "指定文件夹" : "原文件夹 / toMONO" }
+    func directory(for input: URL, chosen: URL?) -> URL? {
+        self == .besideOriginal ? input.deletingLastPathComponent().appendingPathComponent("toMONO", isDirectory: true) : chosen
+    }
+    static func uniqueOutput(for input: URL, settings: RecipeDocument, directory: URL) -> URL {
+        let suffix = settings.narrowChannel.map { "_" + $0 + "_窄带" } ?? "_单色"
+        let base = input.deletingPathExtension().lastPathComponent + suffix
+        var number = 1
+        var output = directory.appendingPathComponent(base + ".dng")
+        while FileManager.default.fileExists(atPath: output.path) || FileManager.default.fileExists(atPath: output.deletingPathExtension().appendingPathExtension("processing.json").path) {
+            number += 1; output = directory.appendingPathComponent(base + "_\(number).dng")
+        }
+        return output
+    }
+}
+
 @MainActor final class AppModel: ObservableObject {
     @Published var startupReady = false
     @Published var startupError: String?
@@ -135,19 +155,24 @@ struct InputItem: Identifiable {
     @Published var items: [InputItem] = []
     @Published var selection: UUID? { didSet { if selection != oldValue { activateSelection() } } }
     @Published var selectedIDs: Set<UUID> = []
-    @Published var recipe = RecipeDocument() { didSet { persistCurrentSettings() } }
+    @Published var recipe = RecipeDocument() { didSet { persistCurrentSettings();recipeInspectionChanged(from:oldValue) } }
     @Published var folder: URL?
+    @Published var exportLocation: ExportLocation = .chosenFolder
+    var exportLocationDescription: String {
+        exportLocation == .besideOriginal ? "各原文件夹下的 toMONO 文件夹" : (folder?.path ?? "请选择保存位置")
+    }
     @Published var running = false
     @Published var fraction = 0.0
     @Published var phase = "添加 RAW 文件，或拖放到窗口中"
     @Published var preview: NSImage?
+    @Published var previewPixelSize: NSSize = .zero
     @Published var previewBusy = false
     @Published var previewMessage = ""
     @Published var reconstructionSummary = "自动识别传感器布局"
     @Published var greenCorrectionSummary = "生成模拟后显示实际校正数量"
     @Published var histogram: PreviewHistogram?
     @Published var rawHistogram: RawSourceHistogram?
-    @Published var responseSummary = "绿色响应 · 频域精细"
+    @Published var responseSummary = "绿色响应 · 方向自适应"
     @Published var showingSource = false
     @Published var showingReference = false
     @Published var brightness = 0.0
@@ -157,6 +182,7 @@ struct InputItem: Identifiable {
     @Published var presetMessage = "默认设置 · 可直接转换，无需保存预设" { didSet { persistPresetInfo() } }
     private var presetSnapshot: RecipeDocument? { didSet { persistPresetInfo() } }
     private var restoringSettings = false
+    var restoringForInspection: Bool { restoringSettings }
     private var importDefaults = RecipeDocument()
     private var process: Process?
     private var pending: [UUID] = []
@@ -166,6 +192,7 @@ struct InputItem: Identifiable {
     private var cancelRequested = false
     private var jobRecipe = RecipeDocument()
     private var jobRecipes: [UUID:RecipeDocument] = [:]
+    private var jobDirectories: [UUID:URL] = [:]
     private var recipeFile: URL?
     private var scopedResources: [URL] = []
     var previewTask: Process?
@@ -175,12 +202,38 @@ struct InputItem: Identifiable {
     var previewCache: [String: URL] = [:]
     var previewResolved: [String: [String: Any]] = [:]
     var previewHistograms: [String: PreviewHistogram] = [:]
+    var previewSizes: [String: NSSize] = [:]
+    var previewOrder: [String] = []
+    @Published var previewDetail: PreviewDetail?
+    @Published var previewDetailBusy = false
+    var previewCurrentKey: String?
+    var previewRasters: [String:PreviewRaster] = [:]
+    var previewRasterOrder: [String] = []
+    var previewViewport: NSRect?
+    var previewPendingRect: NSRect?
+    var previewTileTicket = UUID()
+    var previewTileWork: DispatchWorkItem?
+    var previewTileCancellation: PreviewTileCancellation?
+    var previewWantsDetail = false
+    @Published var inspectionEnabled = true
+    @Published var inspectionLoupe: InspectionLoupeState?
+    var inspectionRegionsByInput: [UUID:[PreviewInspectionRegion]] = [:]
+    var inspectionRegionIndex: [UUID:Int] = [:]
+    var inspectionBeforeKey: String?
+    var inspectionAfterKey: String?
+    var inspectionExpectedRecipe: RecipeDocument?
+    var inspectionTicket = UUID()
+    var inspectionCancellation: PreviewTileCancellation?
+    var previewShownKey: String?
+    var previewShownRecipe: RecipeDocument?
+    var previewRecipes: [String:RecipeDocument] = [:]
     let previewDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("toMONO-previews-\(UUID().uuidString)", isDirectory: true)
     var selected: InputItem? { items.first { $0.id == selection } }
     var selectedCount: Int { items.filter { selectedIDs.contains($0.id) }.count }
-    var resources: URL { Bundle.main.resourceURL! }
+    private let resourceOverride: URL?
+    var resources: URL { resourceOverride ?? Bundle.main.resourceURL! }
 
-    init() { AppLifecycle.models.add(self); ExecutionLogStore.shared.record("workspace_created"); startStartupCheck() }
+    init(resourceOverride:URL?=nil) { self.resourceOverride=resourceOverride;AppLifecycle.models.add(self); ExecutionLogStore.shared.record("workspace_created"); startStartupCheck() }
 
     private func persistCurrentSettings() {
         guard !restoringSettings else { return }
@@ -208,6 +261,9 @@ struct InputItem: Identifiable {
             items[index].settings.response_red=current.response_red;items[index].settings.response_green=current.response_green
             items[index].settings.response_blue=current.response_blue;items[index].settings.response_exposure=current.response_exposure
             items[index].settings.narrow_interpolation=current.narrow_interpolation
+            if current.narrowChannel != nil && items[index].settings.detail_mode == "lmmse" {
+                items[index].settings.detail_mode = "directional"
+            }
         }
         phase="已将当前响应同步到 \(ids.count) 张照片"
         ExecutionLogStore.shared.record("response_explicitly_copied",fields:["count":ids.count,"scope":all ? "all" : "selected","response_mode":current.response_mode,"response_exposure":current.response_exposure])
@@ -257,7 +313,7 @@ struct InputItem: Identifiable {
         let url = item.url
         DispatchQueue.global(qos:.utility).async { [weak self] in
             var image: NSImage?
-            if let source = CGImageSourceCreateWithURL(url as CFURL,nil),let cg = CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways:true,kCGImageSourceThumbnailMaxPixelSize:96,kCGImageSourceCreateThumbnailWithTransform:true] as CFDictionary) {
+            if let source = CGImageSourceCreateWithURL(url as CFURL,nil),let cg = CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways:true,kCGImageSourceThumbnailMaxPixelSize:440,kCGImageSourceCreateThumbnailWithTransform:true] as CFDictionary) {
                 image = NSImage(cgImage:cg,size:NSSize(width:cg.width,height:cg.height))
             }
             DispatchQueue.main.async {
@@ -282,7 +338,7 @@ struct InputItem: Identifiable {
         p.canChooseDirectories = true; p.canChooseFiles = false; p.canCreateDirectories = true
         if p.runModal() == .OK, let url = p.url {
             if let previous = folder, previous != url { releaseAccess(to: previous) }
-            retainAccess(to: url); folder = url
+            retainAccess(to: url); folder = url; exportLocation = .chosenFolder
             ExecutionLogStore.shared.record("output_folder_selected", fields: ["folder": url.path])
         }
     }
@@ -379,16 +435,6 @@ struct InputItem: Identifiable {
         }
         catch { notice = "保存设置预设失败：\(error.localizedDescription)" }
     }
-    func uniqueOutput(for url: URL, settings: RecipeDocument? = nil) -> URL {
-        let suffix = (settings ?? recipe).narrowChannel.map { "_" + $0 + "_窄带" } ?? "_单色"
-        let base = url.deletingPathExtension().lastPathComponent + suffix
-        var n = 1
-        var result = folder!.appendingPathComponent(base + ".dng")
-        while FileManager.default.fileExists(atPath: result.path) || FileManager.default.fileExists(atPath: result.deletingPathExtension().appendingPathExtension("processing.json").path) {
-            n += 1; result = folder!.appendingPathComponent(base + "_\(n).dng")
-        }
-        return result
-    }
     func start() { startExport(all: false) }
     func startAll() { startExport(all: true) }
     func exportIDs(all: Bool) -> [UUID] { items.filter { all || selectedIDs.contains($0.id) }.map(\.id) }
@@ -399,15 +445,18 @@ struct InputItem: Identifiable {
         if let bad=items.first(where: { ids.contains($0.id) && !$0.settings.responseValid }) {
             notice="\(bad.url.lastPathComponent) 的响应参数无效：RGB至少保留一个大于零的比例，曝光限于±6EV";return
         }
-        if folder == nil { chooseFolder() }
-        guard folder != nil else { phase = "请选择保存位置后开始转换"; return }
+        if exportLocation == .chosenFolder && folder == nil { chooseFolder() }
+        guard exportLocation == .besideOriginal || folder != nil else { phase = "请选择保存位置后开始转换"; return }
+        jobDirectories = Dictionary(uniqueKeysWithValues: items.filter { ids.contains($0.id) }.compactMap { item in
+            exportLocation.directory(for:item.url,chosen:folder).map { (item.id,$0) }
+        })
         stopPreview(); pending = ids;jobRecipes=Dictionary(uniqueKeysWithValues:items.filter { ids.contains($0.id) }.map { ($0.id,$0.settings) }); cancelRequested = false; running = true
         ExecutionLogStore.shared.record("queue_started", fields: ["count": ids.count,"scope": all ? "all" : "selected","inputs":items.filter { ids.contains($0.id) }.map { $0.url.path }])
         startNext()
     }
     private func startNext() {
         guard !cancelRequested, !pending.isEmpty else {
-            running = false; process = nil; active = nil; fraction = 0;jobRecipes=[:]
+            running = false; process = nil; active = nil; fraction = 0;jobRecipes=[:];jobDirectories=[:]
             phase = cancelRequested ? "已取消，已保存的文件会保留" : "队列处理完成"
             ExecutionLogStore.shared.record("queue_finished", fields: ["cancelled": cancelRequested])
             updatePreview()
@@ -416,7 +465,15 @@ struct InputItem: Identifiable {
         let id = pending.removeFirst(); active = id
         guard let index = items.firstIndex(where: { $0.id == id }) else { startNext(); return }
         jobRecipe=jobRecipes[id] ?? items[index].settings
-        let input = items[index].url; let output = uniqueOutput(for: input, settings: jobRecipe)
+        let input = items[index].url
+        guard let directory = jobDirectories[id] else { items[index].status="失败";items[index].detail="未指定保存位置";startNext();return }
+        do { try FileManager.default.createDirectory(at:directory,withIntermediateDirectories:true) }
+        catch {
+            items[index].status="失败";items[index].detail="无法创建保存文件夹 \(directory.path)：\(error.localizedDescription)。可改用“指定文件夹”。"
+            ExecutionLogStore.shared.record("output_directory_failed",level:"error",fields:["input":input.path,"directory":directory.path,"error":error.localizedDescription])
+            startNext();return
+        }
+        let output = ExportLocation.uniqueOutput(for:input,settings:jobRecipe,directory:directory)
         ExecutionLogStore.shared.record("conversion_started", fields: ["input": input.path, "output": output.path])
         items[index].status = "处理中"; items[index].detail = ""; items[index].output = nil; items[index].outputRecipe = nil; updatePreview(); fraction = 0; phase = "准备处理 \(input.lastPathComponent)"
         let temp = FileManager.default.temporaryDirectory.appendingPathComponent("tomono-recipe-\(UUID().uuidString).json")

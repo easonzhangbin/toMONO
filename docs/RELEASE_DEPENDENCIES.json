@@ -1,5 +1,5 @@
 {
-  "release": "1.0 Beta 8.1 build 11",
+  "release": "1.1.0 build 15",
   "source_archives": [
     {
       "file": "rawpy-0.27.1.tar.gz",
@@ -54,6 +54,20 @@
       "url": "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.gz",
       "sha256": "c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16",
       "upstream_pinned_sha256": "c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16"
+    },
+    {
+      "file": "ipol-g_zwld-v1.1-src.tar.gz",
+      "url": "https://www.ipol.im/pub/art/2011/g_zwld/src.tar.gz",
+      "sha256": "1c401a9e4473e90e1205d821b89264171a3f68ae5a27c0855098485a7e71de4d",
+      "upstream_pinned_sha256": null,
+      "license": "BSD-2-Clause (code; paper text has separate terms)",
+      "bundled_native_library": "libtomono_lmmse.dylib",
+      "vendored_source_directory": "portable/src/lmmse",
+      "wrapper_sources": [
+        "portable/src/lmmse_wrapper.c",
+        "portable/lmmse_reconstruction.py"
+      ],
+      "reference": "Pascal Getreuer, IPOL 2011, DOI 10.5201/ipol.2011.g_zwld; Lei Zhang and Xiaolin Wu, IEEE TIP 2005, DOI 10.1109/TIP.2005.857260"
     }
   ],
   "lensfun_build_recipe": "https://github.com/letmaik/lensfunpy/blob/v1.18.0/.github/scripts/build-macos.sh",
@@ -64,5 +78,5 @@
     "lensfunpy/external/lensfun": "101c745e847a5de4a1e569a94368ce2027198598"
   },
   "exiftool_version": "13.53",
-  "scope": "Source and build material for bundled LibRaw, Lensfun/database, GLib, gettext/libintl and their build dependencies, plus rawpy/lensfunpy wrappers and exact ExifTool Perl source. Other permissive runtime licenses are in ThirdPartyNotices.txt; this is not a promise of a bit-for-bit full-environment rebuild."
+  "scope": "Source and build material for bundled LibRaw, Lensfun/database, GLib, gettext/libintl and their build dependencies, plus rawpy/lensfunpy wrappers, exact ExifTool Perl source and the IPOL Zhang-Wu LMMSE v1.1 reference C source used by libtomono_lmmse. Other permissive runtime licenses are in ThirdPartyNotices.txt; this is not a promise of a bit-for-bit full-environment rebuild."
 }

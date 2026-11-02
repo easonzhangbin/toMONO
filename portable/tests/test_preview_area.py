@@ -35,6 +35,24 @@ def display(image,black,white,gamma):
 
 
 class PreviewAreaTests(unittest.TestCase):
+    def test_long_edge_overview_native_geometry_all_orientations(self):
+        for h,w in [(2191,3001),(3001,2191),(2301,2301),(31,47)]:
+            image=np.full((h,w),12345,np.uint16)
+            for orientation in range(1,9):
+                s=structure(image.shape,orientation=orientation)
+                result=orient_preview(make_preview(image,0,65535,s,2.2,max_edge=2048),orientation)
+                self.assertEqual(max(result.shape[:2]),min(2048,max(h,w)))
+                ratio=min(1,2048/max(h,w))
+                target=(max(1,round(h*ratio)),max(1,round(w*ratio)))
+                self.assertEqual(result.shape[:2],target[::-1] if orientation>=5 else target)
+                self.assertEqual(np.unique(result).size,1)
+                self.assertEqual(int(image[0,0]),12345)
+
+    def test_invalid_long_edge(self):
+        image=np.zeros((4,4),np.uint16)
+        for edge in [0,-1,True,2048.5]:
+            with self.assertRaises(ValueError):make_preview(image,0,65535,structure(image.shape),2.2,max_edge=edge)
+
     def test_two_by_two_phase_pattern_is_averaged_before_gamma_at_all_crop_parities(self):
         image=np.tile(np.array([[0,1000],[2000,3000]],np.uint16),(34,36))
         image.flags.writeable=False

@@ -84,7 +84,7 @@ def rational_pair(seq):
     from fractions import Fraction
     return tuple(x for v in seq for x in (lambda f:(f.numerator,f.denominator))(Fraction(v).limit_denominator(1000000)))
 
-def make_preview(pixels,black,white,structure,gamma,max_width=640):
+def make_preview(pixels,black,white,structure,gamma,max_width=640,*,max_edge=None):
     """Area-average linear DN before display transfer; never subsample phases.
 
     Keep the returned RGB in sensor orientation: callers still apply
@@ -105,12 +105,20 @@ def make_preview(pixels,black,white,structure,gamma,max_width=640):
     crop=pixels[top:top+ch,left:left+cw]
     transposed=int(structure.get('Orientation',1)) in (5,6,7,8)
     display_width=ch if transposed else cw
-    if display_width<=max_width:
+    if max_edge is not None:
+        if isinstance(max_edge,(bool,np.bool_)) or not isinstance(max_edge,(int,np.integer)) or max_edge<1:
+            raise ValueError('预览长边必须为正整数')
+        # Use the existing linear area integrator; preserve embedded-DNG width
+        # semantics for callers that do not request a bounded overview.
+    if (max(cw,ch)<=max_edge if max_edge is not None else display_width<=max_width):
         # Preserve the native-resolution transfer exactly; details/RAW pixels
         # are not filtered or rewritten by the overview downsampling change.
         linear=crop.astype(np.float32)
     else:
-        if transposed:
+        if max_edge is not None:
+            scale=max_edge/max(cw,ch)
+            ow=max(1,int(round(cw*scale)));oh=max(1,int(round(ch*scale)))
+        elif transposed:
             oh=int(max_width);ow=max(1,int(round(cw*oh/ch)))
         else:
             ow=int(max_width);oh=max(1,int(round(ch*ow/cw)))
@@ -142,12 +150,15 @@ def make_preview(pixels,black,white,structure,gamma,max_width=640):
     preview=np.clip((linear-black)/(white-black),0,1)
     return np.repeat((preview**(1/gamma)*255).astype(np.uint8)[:,:,None],3,axis=2)
 
+def detail_display_lut(black,white,gamma):
+    values=np.arange(65536,dtype=np.float32)
+    return (np.clip((values-black)/(white-black),0,1)**(1/gamma)*255).astype(np.uint8)
+
 def make_detail_preview(pixels,black,white,structure,gamma):
     """8-bit display plane at native crop resolution; 64K LUT bounds memory."""
     left=int(structure['active_area'][1]+structure['crop_origin'][0]);top=int(structure['active_area'][0]+structure['crop_origin'][1])
     cw,ch=map(int,structure['crop_size'])
-    values=np.arange(65536,dtype=np.float32)
-    lut=(np.clip((values-black)/(white-black),0,1)**(1/gamma)*255).astype(np.uint8)
+    lut=detail_display_lut(black,white,gamma)
     return lut[pixels[top:top+ch,left:left+cw]]
 
 def make_histogram(pixels,black,white,structure,gamma,checkpoint=None):
@@ -201,7 +212,7 @@ def write_dng(source,output,pixels,black,white,structure,recipe):
        (50717,'I',1,int(white),False),(50719,'2I',2,rational_pair(structure['crop_origin']),False),
        (50720,'2I',2,rational_pair(structure['crop_size']),False),(50829,'I',4,tuple(structure['active_area']),False)]
     with tifffile.TiffWriter(output,byteorder='<') as t:
-        t.write(preview,photometric='rgb',subifds=1,subfiletype=1,metadata=None,software='toMONO 1.0 Beta 8.1',extratags=common)
+        t.write(preview,photometric='rgb',subifds=1,subfiletype=1,metadata=None,software='toMONO 1.1.0 (build 15)',extratags=common)
         t.write(pixels,photometric=34892,metadata=None,software=False,rowsperstrip=h,extratags=rawtags)
     with Path(output).open('r+b') as stream:
         with tifffile.TiffFile(stream) as t:

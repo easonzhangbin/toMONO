@@ -1,13 +1,14 @@
 {
   "schema": 1,
-  "updated": "2026-10-31",
+  "updated": "2026-11-02",
   "introduction": [
     "2026-10-31历史CNN研究勘误：真实RAW研究输出已发现2×2相位/棋盘格伪影，涉及同色CNN与RGB引导CNN候选（包括B10、B20/B21）。原数字测试与训练记录保留，但这些模型尚未通过真实RAW画质验收，不随本轮细节模式整合；本轮没有新增训练。",
     "本页记录toMONO已使用组件、当前集成的独立自研实现、历史研究与参考资料。文字离线可读，原始论文与代码链接需要联网。来源总数由条目列表显示，采用关系和局限分别标明。",
     "历史训练记录（2026-10-31登记）：实际完成3个自有训练家族、6个冻结权重、合计22,528步优化；训练仅使用BSDS官方train200，val100选模，test200由独立评价使用。数字图像近似线性不等于相机原生RAW真值；这些训练模型及训练集不随本App打包。",
     "1.0 Beta 8 build 9将三种确定性细节模式集成到直接2×2 RGB Bayer路径：C01“频域精细”为新默认，D11“频域限幅”与D10“方向自适应”可选。普通绿色、RGB响应混合的各参与目标色及严格窄带使用所选核；普通路径另按选择执行绿色差异校正与参与颜色坏点修复，严格窄带跳过绿色差异校正且只修所选颜色。未支持的新核输入域在普通路径明确回退legacy，严格路径拒绝。",
     "三个新核保持场景线性、逐相位黑白归一化与目标色输入约束，产品固定σ=0，不自动估噪或增加神经网络。无版本或version1的旧预设在缺detail_mode时迁移为legacy；version2缺detail_mode时取spectral。旧Bicubic/EdgeAware/Auto和严格通道cubic/linear选项仅控制legacy路径。C01仍可能振铃、放大噪声与改变alias；D11可能压制纹理并留下相位误差；D10有周期纹理退化。研究、产品处理条件和跨显影器外观分别验证，不宣称新增超Nyquist真实细节。",
-    "参考论文、原组件、官方实现适配和自研设计不是同一关系。C01由采样格几何独立推导；D10/D11只借用所列原则，不是论文完整复现，不继承原文成绩。历史RI/ARI、MMNet及自有CNN研究结果仍按原日期与限制保留；宽谱RGB引导固定G模型不适用于窄带默认。"
+    "参考论文、原组件、官方实现适配和自研设计不是同一关系。C01由采样格几何独立推导；D10/D11只借用所列原则，不是论文完整复现，不继承原文成绩。历史RI/ARI、MMNet及自有CNN研究结果仍按原日期与限制保留；宽谱RGB引导固定G模型不适用于窄带默认。",
+    "1.1正式版从2026-11-01起将directional=D10作为新照片和复位默认；spectral=C01与spectral_guard=D11保留可选。普通照片新增IPOL Zhang–Wu LMMSE v1.1参考实现适配，跨颜色估算，不能用于严格窄带。旧version2缺细节字段仍使用spectral以保留迁移语义；本轮不集成自动混合或研究神经网络。"
   ],
   "entries": [
     {
@@ -16,7 +17,7 @@
       "title": "Python 运行环境",
       "authors": "Python Software Foundation",
       "year": null,
-      "version": "3.12.14",
+      "version": "3.12.13",
       "url": "https://www.python.org/",
       "codeURL": null,
       "function": "运行本地读取、转换、预览与元数据处理后台。",
@@ -187,8 +188,8 @@
       "version": "1.0 Beta 8 build 9",
       "url": "",
       "codeURL": null,
-      "function": "在直接2×2 RGB Bayer上以C01频域精细为新默认，提供D11频域限幅和D10方向自适应；逐目标色重建后执行选定响应混合与显式EV，保持线性单通道DNG。普通路径按用户选择执行绿色差异校正，并按参与响应的目标颜色修复坏点；strict仅修所选颜色并跳过绿色差异校正。",
-      "relationship": "toMONO当前集成的独立确定性实现。三细节核本身只读取各自目标色；普通流程中的可选绿色校正另有明确输入依赖，不能把整个普通流程称为strict输入隔离。频域核为采样格独立推导，方向/限幅核为原则启发，不是NEDI、LMMSE、GCV、Hyman或神经网络的完整复现。",
+      "function": "直接2×2 RGB Bayer默认D10方向自适应，C01频域精细、D11频域限幅保留可选；普通照片另可选IPOL LMMSE统计重建。逐目标响应混合与显式EV保持线性单通道DNG；普通路径按选择执行绿色差异校正和参与颜色坏点修复，strict仅修所选色并跳过绿色差异校正。",
+      "relationship": "C01/D10/D11为toMONO独立确定性实现，核本身只读取目标同色，不是相应论文完整复现；普通可选绿色校正另有输入依赖。LMMSE为单独登记的跨颜色参考实现适配，不将其称为同色独立核。",
       "materialStatus": "2026-10-31，1.0 Beta 8 build 9：spectral=C01默认，spectral_guard=D11、directional=D10可选；普通G、RGB mix各参与目标色与strict窄带共用所选细节核，σ=0、无自动估噪。逐相位float64归一化，在选定坏点/绿色校正后保留目标观测，再混合、显式EV与一次容器舍入；可选镜头处理、修复与曝光仍可改变数值。unsupported普通输入明确记录legacy回退，strict拒绝不支持域。无版本/version1缺细节字段保留legacy行为，version2缺字段使用spectral。历史插值选项只控制legacy；线性DN面积平均概览与预览外观适配继续独立，不用显示曲线掩盖格点伪影。",
       "referenceIDs": [
         "tomono-detail-spectral",
@@ -199,7 +200,7 @@
     {
       "id": "tomono-detail-spectral",
       "category": "integrated",
-      "title": "toMONO 频域精细（C01，spectral；当前默认）",
+      "title": "toMONO 频域精细（C01，spectral）",
       "authors": "toMONO 本地独立实现",
       "year": "2026",
       "version": "1.0 Beta 8 build 9",
@@ -207,7 +208,7 @@
       "codeURL": null,
       "function": "按实际同色采样格以97×97紧支撑FIR重建缺失位：G使用quincunx菱形频带，R/B使用矩形频带；有限核以FFT分块求值，反射边界保留CFA相位，缺测相位分别作DC归一化。",
       "relationship": "由采样格与倒格频谱独立推导的toMONO确定性实现；不是某篇RGB频域去马赛克论文的复现，也没有光学PSF反卷积、生成式超分或跨色引导。",
-      "materialStatus": "2026-10-31集成于1.0 Beta 8 build 9，成为新预设默认。普通G、RGB mix每个参与色及strict均可用；核本身只用目标色，产品σ=0、不估噪。紧支撑截断、频带滚降和反射会影响边界；保留带宽可能伴随振铃、过冲、噪声放大及带外alias。硬保留实测位不能修复输入已有alias，不能据频带内合成成绩声称全场景更清晰。",
+      "materialStatus": "2026-10-31集成于1.0 Beta 8 build 9，当时成为新预设默认；1.1正式版改以D10为默认，本模式保留可选。普通G、RGB mix每个参与色及strict均可用；核本身只用目标色，产品σ=0、不估噪。紧支撑截断、频带滚降和反射会影响边界；保留带宽可能伴随振铃、过冲、噪声放大及带外alias。硬保留实测位不能修复输入已有alias，不能据频带内合成成绩声称全场景更清晰。",
       "referenceIDs": null
     },
     {
@@ -229,7 +230,7 @@
     {
       "id": "tomono-detail-directional",
       "category": "integrated",
-      "title": "toMONO 方向自适应（D10，directional）",
+      "title": "toMONO 方向自适应（D10，directional；当前默认）",
       "authors": "toMONO 本地独立实现",
       "year": "2026",
       "version": "1.0 Beta 8 build 9",
@@ -237,12 +238,28 @@
       "codeURL": null,
       "function": "G通道用同色粗尺度横/竖多项式预测，拟合一参数带ridge的H/V混合，以稳定化PRESS删行代理控制方向权重，再迁移到细格并限制局部范围；R/B采用共同有界cubic。",
       "relationship": "由粗细尺度方向统计迁移、方向候选融合和固定设计ridge删行代数启发的独立改写，不是四预测器NEDI、原文LMMSE、真实source-LOO、GCV选参或论文完整复现。",
-      "materialStatus": "2026-10-31集成于1.0 Beta 8 build 9，普通各参与色与strict可选；产品只用σ=0，不自动估噪，也不包含研究版noise-aware分支。PRESS代理未真正删去原RAW样本，重叠特征、beta及lambda未重新估计，不能称独立验证或统计置信度。G在部分边缘/正弦有收益，也发现周期织纹、斜向结构和低信噪比退化；R/B没有新AR解析力主张。有界处理不保证恢复真实未采样纹理。",
+      "materialStatus": "2026-11-01起为1.1新照片与复位默认；2026-10-31集成于1.0 Beta 8 build 9，普通各参与色与strict可选；产品只用σ=0，不自动估噪，也不包含研究版noise-aware分支。PRESS代理未真正删去原RAW样本，重叠特征、beta及lambda未重新估计，不能称独立验证或统计置信度。G在部分边缘/正弦有收益，也发现周期织纹、斜向结构和低信噪比退化；R/B没有新AR解析力主张。有界处理不保证恢复真实未采样纹理。",
       "referenceIDs": [
         "nedi2001",
         "direction-fusion2006",
         "allen-press1974",
         "golub-gcv1979"
+      ]
+    },
+    {
+      "id": "ipol-lmmse2011",
+      "category": "integrated",
+      "title": "Zhang–Wu Directional LMMSE Image Demosaicking（IPOL参考实现）",
+      "authors": "Pascal Getreuer；原方法Lei Zhang、Xiaolin Wu",
+      "year": "2011",
+      "version": "IPOL g_zwld v1.1；UseZhangCodeEst=0",
+      "url": "https://doi.org/10.5201/ipol.2011.g_zwld",
+      "codeURL": "https://www.ipol.im/pub/art/2011/g_zwld/src.tar.gz",
+      "function": "普通2×2 RGB Bayer照片的LMMSE统计重建实验选项；利用水平/垂直G−R、G−B方向颜色差及局部估计误差融合后形成RGB，再按所选线性响应输出。",
+      "relationship": "实际采用BSD-2-Clause官方C参考源码，保留公式、参考均值分支及归一化epsilon=0.1/(255²)；本项目另做CFA接口、实测采样恢复、有限邻域分块和混合/EV后最终量化包装，不是仅借用名称的同色近似。",
+      "materialStatus": "2026-11-01用户确认后加入1.1可选实验；不替换D10默认。官方源码归档SHA-256：1c401a9e4473e90e1205d821b89264171a3f68ae5a27c0855098485a7e71de4d。代码许可原文随源码和组件许可保留，论文存档文本另按其原标记。核验四Bayer相位、奇偶尺寸、整图/分块、测量恢复及量化；五机型17份研究DNG仅证明该样本的文件与数据检查。高光越界、颜色不相关细纹和小幅边界偏差仍存在；不能用于独立窄带，不宣称全面最佳或新增真实采样。",
+      "referenceIDs": [
+        "lmmse2005"
       ]
     },
     {
@@ -382,11 +399,11 @@
       "authors": "Lei Zhang；Xiaolin Wu",
       "year": "2005",
       "version": null,
-      "url": "https://www4.comp.polyu.edu.hk/~cslzhang/paper/LMMSEdemosaicing.pdf",
+      "url": "https://doi.org/10.1109/TIP.2005.857260",
       "codeURL": "https://www.ipol.im/pub/art/2011/g_zwld/",
-      "function": "方向估计误差统计与候选融合，供同色方向研究参考。",
-      "relationship": "仅参考其方法依据；原始跨通道色差假设不能直接套入窄带。",
-      "materialStatus": "论文与 IPOL 实例列为来源，没有把当前 Bicubic 标为该算法。",
+      "function": "原始方向线性最小均方误差去马赛克方法：G−R/G−B方向差估算、局部二阶统计与水平/垂直误差融合。",
+      "relationship": "原始理论来源；实际集成的Pascal Getreuer IPOL参考实现与本项目接口包装单独登记。跨颜色相关性假设不能直接用于严格窄带。",
+      "materialStatus": "1.1作为LMMSE实验选项的理论引用；不把C01、D10、旧Bicubic或研究局部混合误称该论文原算法。",
       "referenceIDs": null
     },
     {
@@ -803,9 +820,9 @@
       "version": "1.0 Beta 8 build 9；detail_mode=spectral|spectral_guard|directional|legacy",
       "url": "",
       "codeURL": null,
-      "function": "为已知红、绿或蓝窄带从所选CFA同色采样重建完整有效区单通道DNG；当前默认C01频域精细，可选D11频域限幅或D10方向自适应，并仅按显式目标坏点表修复所选颜色。",
+      "function": "为已知红、绿或蓝窄带从所选CFA同色采样重建完整有效区单通道DNG；1.1默认D10方向自适应，可选C01频域精细或D11频域限幅；LMMSE跨颜色路径不可用于此功能，并仅按显式目标坏点表修复所选颜色。",
       "relationship": "自研确定性算子和严格处理路径；不读取其他颜色作插值、方向或局部范围引导，跳过全部绿色差异校正。D10在R/B上使用共同有界cubic回退，不是新的R/B自回归方法。数字同色隔离不等于物理光谱解混。",
-      "materialStatus": "当前（2026-10-31，1.0 Beta 8 build 9）：仅直接2×2 RGB Bayer，所选三细节核σ=0、无自动估噪、白平衡、曝光或直方图拉齐；显式EV按预设保留。目标采样按实际逐相位黑白电平归一化，修复后观测在混合前保留，最后映射公共容器并舍入；可选目标坏点、显式EV和镜头处理可能改变数值，不声称源DN全部原样或新增真实解析力。其他CFA、原生单色、LibRaw线性回退及未验证DNG处理域会拒绝。旧cubic/linear只用于legacy；无版本/version1缺detail_mode迁移legacy，version2缺字段取spectral。历史验证（Beta7，2026-10-31登记；不代表三种新核已复现相同测试）：已导出DC-S1H两个RGB三拍组×两种插值，共12份全尺寸DNG，独立LibRaw/结构审计全部通过，6源SHA保持。0 EV、无额外坏点与镜头处理时，两种输出合计385,890,304个目标位置符合归一化与公共容器舍入公式，差异0；相同来源在不同插值输出中重复计数，不代表新增独立测量。实际画面8018×12032、DefaultCrop12000×8000、Orientation1；没有真实场景逐像素真值，不能据此声称插值画质或所有机型已验收。",
+      "materialStatus": "1.1继续此同色约束，默认D10，LMMSE明确禁止。历史实现与验证：当前（2026-10-31，1.0 Beta 8 build 9）：仅直接2×2 RGB Bayer，所选三细节核σ=0、无自动估噪、白平衡、曝光或直方图拉齐；显式EV按预设保留。目标采样按实际逐相位黑白电平归一化，修复后观测在混合前保留，最后映射公共容器并舍入；可选目标坏点、显式EV和镜头处理可能改变数值，不声称源DN全部原样或新增真实解析力。其他CFA、原生单色、LibRaw线性回退及未验证DNG处理域会拒绝。旧cubic/linear只用于legacy；无版本/version1缺detail_mode迁移legacy，version2缺字段取spectral。历史验证（Beta7，2026-10-31登记；不代表三种新核已复现相同测试）：已导出DC-S1H两个RGB三拍组×两种插值，共12份全尺寸DNG，独立LibRaw/结构审计全部通过，6源SHA保持。0 EV、无额外坏点与镜头处理时，两种输出合计385,890,304个目标位置符合归一化与公共容器舍入公式，差异0；相同来源在不同插值输出中重复计数，不代表新增独立测量。实际画面8018×12032、DefaultCrop12000×8000、Orientation1；没有真实场景逐像素真值，不能据此声称插值画质或所有机型已验收。",
       "referenceIDs": [
         "tomono-core",
         "tomono-detail-spectral",
@@ -916,6 +933,20 @@
       "function": "核对局部RGB幅度归一化、151输入/36输出Controller、GreenFiLM颜色差残差及权重路由，理解RAW burst强度处理与跨色先验边界。",
       "relationship": "仅静态研究参考；未在toMONO中运行、调用、打包、复制或整合其代码与权重。其幅度、混色灰度结构和R/G/B残差耦合不能直接用于strict目标色隔离。",
       "materialStatus": "2026-10-31通过GitHub固定提交只读核对：公开7个Python核心文件与22份NPZ条目，权重清单名称和声明字节数可与树核对，但未下载或验证NPZ内容。显式本地import所指模块均存在；公开部分缺RAW读取/归一化、配准、Tap统计生成、Controller到融合的调用链、应用主入口及训练/复现实验协议，不能称完整RAW端到端复现。README“无源码”与该提交公开树不一致；所述论文全文尚未取得，不采用其性能自述为本软件验收证据。",
+      "referenceIDs": null
+    },
+    {
+      "id": "github-release-api",
+      "category": "integrated",
+      "title": "GitHub Releases API",
+      "authors": "GitHub",
+      "year": null,
+      "version": "REST API 2022-11-28",
+      "url": "https://docs.github.com/en/rest/releases/releases#get-the-latest-release",
+      "codeURL": null,
+      "function": "查询本项目最新正式版本、改进说明与官方安装包下载地址。",
+      "relationship": "通过Apple URLSession异步读取公开Release元数据；toMONO自行实现版本比较和中文提示。",
+      "materialStatus": "不引入GitHub SDK，不上传照片或本机路径，不自动安装代码或升级依赖库。仅正式稳定版本参与提示。",
       "referenceIDs": null
     }
   ]

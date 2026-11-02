@@ -11,7 +11,7 @@ enum AppBrand {
         guard startupTask?.isRunning != true else { return }
         startupReady=false;startupError=nil
         let task=Process();task.executableURL=resources.appendingPathComponent("python/bin/python3")
-        task.arguments=["-s","-c","import json,rawpy,conversion_service,lens_correction,channel_response,pure_narrowband,detail_reconstruction,ctypes; core=channel_response.native_core(); pure_narrowband.native_core(); detail_reconstruction._library(); print(json.dumps({'libraw':list(rawpy.libraw_version),'lens_profiles':len(lens_correction.database().lenses),'detail_modes':list(detail_reconstruction.METHODS)}))"]
+        task.arguments=["-s","-c","import json,rawpy,conversion_service,lens_correction,channel_response,pure_narrowband,detail_reconstruction,lmmse_reconstruction,ctypes; core=channel_response.native_core(); pure_narrowband.native_core(); detail_reconstruction._library(); lmmse_reconstruction._library(); print(json.dumps({'libraw':list(rawpy.libraw_version),'lens_profiles':len(lens_correction.database().lenses),'detail_modes':list(detail_reconstruction.METHODS)+list(lmmse_reconstruction.METHODS)}))"]
         task.currentDirectoryURL=resources.appendingPathComponent("backend");task.environment=workerEnvironment()
         let pipe=Pipe();task.standardOutput=pipe;task.standardError=pipe
         do {

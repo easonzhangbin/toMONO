@@ -123,11 +123,12 @@ class DetailPipelineTests(unittest.TestCase):
 
     def test_linear_and_non_Bayer_fallback_are_declared(self):
         for linear,pattern in [(True,[[0,1],[1,2]]),(False,[[1]])]:
-            with self.source_context(raw=np.full((32,34),3000,np.uint16),pattern=pattern,linear=linear):
-                _,_,params,_,_=compute_monochrome(self.source,Recipe())
-            self.assertEqual(params['requested_detail_mode'],'spectral')
-            self.assertEqual(params['effective_detail_mode'],'legacy')
-            self.assertTrue(params['detail_fallback_reason'])
+            for request in (Recipe(),Recipe(detail_mode='spectral'),Recipe(detail_mode='lmmse')):
+                with self.source_context(raw=np.full((32,34),3000,np.uint16),pattern=pattern,linear=linear):
+                    _,_,params,_,_=compute_monochrome(self.source,request)
+                self.assertEqual(params['requested_detail_mode'],request.detail_mode)
+                self.assertEqual(params['effective_detail_mode'],'legacy')
+                self.assertTrue(params['detail_fallback_reason'])
 
     def test_cancel_during_tile_processing_creates_no_output(self):
         destination=self.folder/'cancelled.dng'
@@ -173,7 +174,7 @@ class DetailPipelineTests(unittest.TestCase):
     def test_default_detail_preview_and_saved_DNG_have_same_pixels_and_parameters(self):
         import monochrome_preview
         # Capture tags are irrelevant to the injected sensor fixture. Imaging
-        # settings, including the new default C01, remain the product defaults.
+        # settings, including the new default D10, remain the product defaults.
         recipe=Recipe(preserve_capture=False,preserve_description=False)
         recipe_path=self.folder/'recipe.json';recipe.save(recipe_path)
         png=self.folder/'preview.png';dng=self.folder/'saved.dng';previous=signal.getsignal(signal.SIGINT)

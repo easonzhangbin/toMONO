@@ -146,12 +146,16 @@ struct ContentView: View {
                 .frame(maxWidth:.infinity).padding(.horizontal,12).padding(.bottom,10).disabled(model.running)
             List(selection: Binding(get: { model.selectedIDs }, set: { model.setSelection($0) })) {
                 ForEach(model.items) { item in
-                    HStack(spacing:9) {
+                    VStack(alignment:.leading,spacing:8) {
                         if let image = item.thumbnail {
-                            Image(nsImage:image).resizable().scaledToFit().frame(width:48,height:48).clipShape(RoundedRectangle(cornerRadius:4))
-                        } else { Image(systemName:"photo").frame(width:48,height:48).foregroundStyle(.tertiary) }
+                            Image(nsImage:image).resizable().scaledToFit()
+                                .frame(maxWidth:.infinity).frame(height:126)
+                                .background(.black.opacity(0.12),in:RoundedRectangle(cornerRadius:6))
+                                .accessibilityLabel("照片缩略图")
+                        } else { Image(systemName:"photo").frame(maxWidth:.infinity).frame(height:126).foregroundStyle(.tertiary) }
                         VStack(alignment: .leading, spacing: 7) {
-                            Text(item.url.lastPathComponent).lineLimit(1).fontWeight(.medium)
+                            Text(item.url.lastPathComponent).lineLimit(1).truncationMode(.middle).fontWeight(.medium)
+                                .help(item.url.lastPathComponent)
                             Label(item.displayStatus, systemImage: statusIcon(item.displayStatus))
                                 .font(.caption).foregroundStyle(statusColor(item.displayStatus))
                         }
@@ -170,9 +174,14 @@ struct ContentView: View {
             }.padding(12)
             VStack(alignment:.leading,spacing:10) {
                 Text("导出").font(.headline)
-                Button("保存位置…",systemImage:"folder",action:model.chooseFolder).disabled(model.running)
-                Text(model.folder?.lastPathComponent ?? "尚未选择保存位置")
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(2).help(model.folder?.path ?? "首次导出时也可选择")
+                Picker("保存到",selection:$model.exportLocation) {
+                    ForEach(ExportLocation.allCases) { location in Text(location.title).tag(location) }
+                }.labelsHidden().accessibilityLabel("导出保存方式").disabled(model.running)
+                if model.exportLocation == .chosenFolder {
+                    Button("保存位置…",systemImage:"folder",action:model.chooseFolder).disabled(model.running)
+                }
+                Text(model.exportLocation == .besideOriginal ? "在每张原图所在文件夹中新建 toMONO" : (model.folder?.lastPathComponent ?? "尚未选择保存位置"))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2).help(model.exportLocationDescription)
                 Button(model.running ? "正在导出…" : "导出选中照片（\(model.selectedCount)）",systemImage:"square.and.arrow.up",action:model.start)
                     .buttonStyle(.borderedProminent).controlSize(.large)
                     .disabled(model.running || model.selectedCount == 0 || !model.startupReady)
@@ -193,6 +202,13 @@ struct ContentView: View {
                 Text(model.selected?.url.lastPathComponent ?? "预览").font(.headline).lineLimit(1)
                 Spacer()
                 if model.selected != nil {
+                    Toggle(isOn: Binding(get: { model.inspectionEnabled }, set: { model.setInspectionEnabled($0) })) {
+                        Label("局部检查", systemImage: "magnifyingglass")
+                    }
+                    .toggleStyle(.button).controlSize(.small)
+                    .disabled(model.showingSource)
+                    .accessibilityLabel("切换模式时显示局部检查")
+                    .help("切换细节模式时，对照同一区域的原生细节；可关闭")
                     if model.recipe.response_mode != "green" || model.recipe.response_exposure != 0 {
                         Button(model.showingReference ? "返回当前响应" : "对照绿色参考") {
                             model.showingSource=false;model.showingReference.toggle();model.updatePreview()
@@ -207,7 +223,12 @@ struct ContentView: View {
                 // Keep image viewing neutral; translucent material belongs to controls.
                 Color(nsColor: .underPageBackgroundColor)
                 if let image = model.preview {
-                    ZoomablePreview(image: image, identity: model.selection, zoom: zoom).brightness(model.brightness)
+                    ZoomablePreview(image: image, identity: model.selection, zoom: zoom,
+                                    nativePixelSize:model.previewPixelSize,detail:model.previewDetail,
+                                    inspectionRect:model.inspectionEnabled && !model.showingSource ? model.inspectionLoupe?.region.rect : nil,
+                                    onZoom:model.previewViewportChanged)
+                        .brightness(model.brightness)
+                        .help("双击查看100%原生细节，再次双击适合窗口；放大后拖动观察")
                 } else if model.selected != nil {
                     VStack(spacing: 14) {
                         if model.previewBusy { ProgressView() }
@@ -228,9 +249,17 @@ struct ContentView: View {
             .overlay(alignment: .topLeading) {
                 if model.preview != nil, !model.previewMessage.isEmpty {
                     HStack(spacing: 8) {
-                        if model.previewBusy { ProgressView().controlSize(.small) }
+                        if model.previewBusy || model.previewDetailBusy { ProgressView().controlSize(.small) }
                         Text(model.previewMessage).font(.caption)
                     }.padding(9).modifier(NativeGlassControls(cornerRadius: 18)).padding(12)
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if model.inspectionEnabled, !model.showingSource, let state = model.inspectionLoupe {
+                    InspectionLoupeView(state: state, brightness: model.brightness,
+                                        close: model.dismissInspectionLoupe, next: model.nextInspectionRegion)
+                        .padding(12)
+                        .transition(.opacity)
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -238,7 +267,7 @@ struct ContentView: View {
                     HStack(spacing: 8) {
                         Button("适合窗口") { zoom.fit() }.controlSize(.small)
                         Button("100%") { zoom.actual() }.controlSize(.small)
-                            .help("一个图像像素对应一个屏幕物理像素；彩色原图为内嵌预览像素")
+                            .help("按需加载原生细节，一个图像像素对应一个屏幕物理像素；也可双击画面")
                         Button { zoom.step(1 / 1.5) } label: { Image(systemName:"minus.magnifyingglass") }.help("缩小")
                         Text("\(Int((zoom.scale * 100).rounded()))%").font(.caption.monospacedDigit()).frame(minWidth:40)
                         Button { zoom.step(1.5) } label: { Image(systemName:"plus.magnifyingglass") }.help("放大，可拖动画面或用触控板捏合")
@@ -271,7 +300,7 @@ struct ContentView: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(model.phase).font(.callout).lineLimit(1)
-                Text("保存至：\(model.folder?.path ?? "请选择保存位置")")
+                Text("保存至：\(model.exportLocationDescription)")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             Spacer()
@@ -478,7 +507,7 @@ struct PresetHelpPopover: View {
             Text("会保存：细节计算模式、单色响应与曝光、绿色校正及阈值、输出预览伽马、匹配预览明暗开关、信息保留开关，以及可选的坏点坐标表和镜头校正。")
             Text("不会保存：照片、输出文件夹、预览亮度、缩放比例和观察位置。")
             Text("保存时建议用相机型号和机身序列号命名，读不到序列号时仅用型号；文件中也会记录来源相机。普通参数可跨机型使用，坏点表不能套用另一机身。")
-            Text("载入未记录细节计算模式的旧预设时，会保留原有模式；新照片默认使用频域精细。")
+            Text("载入未记录细节计算模式的旧预设时，会保留原有模式；新照片默认使用方向自适应（D10）。")
             Text("“保存为相机预设”生成JSON；“载入设置预设”恢复参数。载入后刷新模拟，正式输出需再点击“开始转换”。").foregroundStyle(.secondary)
             HStack { Spacer(); Button("知道了",action:dismiss).keyboardShortcut(.defaultAction) }
         }.font(.callout).fixedSize(horizontal:false,vertical:true).padding(20).frame(width:380)
@@ -499,6 +528,8 @@ struct HelpCommands: Commands {
 
 @main struct ToMONOApp: App {
     @StateObject private var model = AppModel()
+    @StateObject private var updates = UpdateChecker()
+    @State private var checkedUpdatesAtLaunch = false
     @NSApplicationDelegateAdaptor(AppLifecycle.self) private var lifecycle
     var body: some Scene {
         mainWindow
@@ -515,6 +546,20 @@ struct HelpCommands: Commands {
     private var mainWindow: some Scene {
         Window("toMONO", id:"workspace") {
             ContentView(model:model).environment(\.locale, Locale(identifier: "zh_Hans"))
+                .task {
+                    guard !checkedUpdatesAtLaunch else { return }
+                    checkedUpdatesAtLaunch = true
+                    await updates.check()
+                }
+                .sheet(isPresented: Binding(get: { updates.availableRelease != nil }, set: { if !$0 { updates.dismiss() } })) {
+                    if let release = updates.availableRelease {
+                        UpdateAvailableView(release: release, onDismiss: updates.dismiss)
+                            .environment(\.locale, Locale(identifier: "zh_Hans"))
+                    }
+                }
+                .alert("检查更新", isPresented: Binding(get: { updates.message != nil }, set: { if !$0 { updates.clearMessage() } })) {
+                    Button("好", action: updates.clearMessage)
+                } message: { Text(updates.message ?? "") }
         }.defaultSize(width: 1200, height: 780).windowToolbarStyle(.unifiedCompact(showsTitle: true))
              .commands {
                 CommandGroup(replacing:.newItem) {
@@ -525,8 +570,11 @@ struct HelpCommands: Commands {
                 }
                 CommandGroup(replacing:.appInfo) {
                     Button("关于 toMONO") {
-                        NSApp.orderFrontStandardAboutPanel(options:[.applicationName:"toMONO",.applicationVersion:AppBrand.releaseLabel,.version:"1"])
+                        NSApp.orderFrontStandardAboutPanel(options:[.applicationName:"toMONO",.applicationVersion:AppBrand.releaseLabel,.version:Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? "development"])
                     }
+                    Button(updates.isChecking ? "正在检查更新…" : "检查更新…") {
+                        Task { await updates.check(manual: true) }
+                    }.disabled(updates.isChecking)
                 }
                 HelpCommands()
             }

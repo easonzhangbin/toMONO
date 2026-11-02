@@ -1,6 +1,6 @@
 # 从源码构建
 
-当前版本是 Beta 8.1 源码快照，目标为 Apple Silicon macOS。前端使用 SwiftUI / AppKit，后台使用 Python 和 C；不是 Python 绘制的界面。
+当前源码用于 1.1 正式版（1.1.0，构建15）。目标为 Apple Silicon macOS。前端使用 SwiftUI / AppKit，后台使用 Python 和 C；不是 Python 绘制的界面。
 
 ## 环境准备
 
@@ -51,10 +51,18 @@ portable/.venv/bin/python portable/tomono_cli.py red.RW2 -o red_R.dng --recipe e
 
 `examples/narrow-red.json`、`narrow-green.json`、`narrow-blue.json` 仅适用于已知相应窄带光源的拍摄。三次拍摄保持几何、曝光策略与镜头处理一致；软件不会自动拉齐亮度。NegPy 中按光源手动指定 R/G/B 输入。它降低了重建阶段混入其他 CFA 通道的机会，但不能消除滤色片带外响应、光源带宽或光学 / 电学串扰。
 
+## GitHub 版本检查
+
+应用启动后通过系统URLSession异步读取 `https://api.github.com/repos/easonzhangbin/toMONO/releases/latest`，比较正式版本号。此检查不阻塞引擎启动、照片解码或导出。应用菜单提供“检查更新…”，新版窗口显示GitHub Release的改进说明及官方下载入口。
+
+无更新和自动检查失败时保持安静；手动检查显示中文结果。发布草稿、预发布版本和无效版本不作为正式升级。下载通过系统浏览器完成，应用不自动替换自身或后台库。更换LibRaw、Lensfun等组件仍须由开发者验证、编译和重新打包。
+
+请求不附带GitHub授权令牌、照片或本机路径。GitHub会接收常规网络连接信息；该行为与离线照片处理分开说明，不将其误称为整个应用从不联网。
+
 ## 本地 DMG
 
 ```sh
 portable/.venv/bin/python macos/package_dmg.py --app .build/toMONO.app --output dist/toMONO-source-build-AppleSilicon.dmg
 ```
 
-默认是本地 ad-hoc 签名，不是 Developer ID 公证包或 App Store 包。当前 [Release](https://github.com/easonzhangbin/toMONO/releases/tag/v1.0.0-beta.8.1) 同时提供测试 DMG、对应项目源码、校验文件和第三方源码材料。具体组件与固定来源见 [发布依赖清单](RELEASE_DEPENDENCIES.json)；该清单不承诺整套环境逐字节可复现。
+默认是本地 ad-hoc 签名，不是 Developer ID 公证包或 App Store 包。当前 [Release](https://github.com/easonzhangbin/toMONO/releases/tag/v1.1.0) 提供对应版本 DMG、对应项目源码、校验文件和第三方源码材料。具体组件与固定来源见 [发布依赖清单](RELEASE_DEPENDENCIES.json)；该清单不承诺整套环境逐字节可复现。

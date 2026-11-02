@@ -2,6 +2,8 @@
 set -eu
 cd "$(dirname "$0")"
 mkdir -p build/native-macos
+xcrun clang -arch arm64 -mmacosx-version-min=14.0 -std=c11 -O3 -Wall -Wextra -Wno-unused-parameter -ffp-contract=off -fno-fast-math \
+  -Isrc/lmmse -dynamiclib src/lmmse_wrapper.c src/lmmse/dmzhangwu.c src/lmmse/conv.c src/lmmse/basic.c -o build/native-macos/libtomono_lmmse.dylib
 xcrun clang -arch arm64 -mmacosx-version-min=14.0 -std=c11 -O3 -Wall -Wextra -Werror -ffp-contract=off -fno-fast-math \
   -dynamiclib src/detail_native.c -o build/native-macos/libtomono_detail.dylib
 xcrun clang -mmacosx-version-min=14.0 -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -fno-fast-math \

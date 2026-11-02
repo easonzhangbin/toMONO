@@ -35,11 +35,12 @@ struct DetailComputationControls: View {
                     .popover(isPresented:$showHelp,arrowEdge:.leading) {
                         VStack(alignment:.leading,spacing:12) {
                             Text("选择缺失采样的计算方式").font(.headline)
-                            Text("频域精细（C01，默认）：按同色采样的频率特性重建，优先保留细密织纹与细线。高反差边缘可能振铃，暗部噪声也可能更明显。")
+                            Text("方向自适应（D10，默认）：根据局部方向的可靠性补齐绿色位置，优先稳妥控制边缘；红、蓝使用有界同色三次。细密周期织纹仍可能退化。")
+                            Text("频域精细（C01）：按同色采样的频率特性重建，优先保留细密织纹与细线。高反差边缘可能振铃，暗部噪声也可能更明显。")
                             Text("频域限幅（D11）：在频域重建后限制局部极值，可减少过冲；部分周期纹理可能损失极值并出现格点偏差。")
-                            Text("方向自适应（D10）：根据局部方向的可靠性补齐绿色位置；红、蓝使用同色三次回退。周期织纹仍可能退化。")
-                            Text("细节重建核保留目标色的实测约束；显式坏点、绿色校正、曝光及镜头处理仍可能改变数值。不自动估噪、锐化或生成纹理。常规模式遇其他排列或线性输入使用原有路径并显示实际结果；严格窄带不符合直接2×2 Bayer时会拒绝。")
-                            Text("普通单色、RGB混合与窄带纯通道共用此选择，预览和导出使用相同计算。没有一种模式能保证所有照片都更好；建议在100%查看细纹、暗部与高反差边缘。")
+                            Text("LMMSE统计重建（实验）：按Zhang–Wu方向色差统计估算缺失采样，会借助其他颜色。仅用于普通绿色或RGB混合，不用于窄带独立纯通道；高光过冲与不相关颜色纹理仍有风险。")
+                            Text("细节重建核保留目标色的实测约束；显式坏点、绿色校正、曝光及镜头处理仍可能改变数值。不作额外相机噪声标定、锐化或生成纹理；LMMSE内部使用局部残差统计。常规模式遇其他排列或线性输入使用原有路径并显示实际结果；严格窄带不符合直接2×2 Bayer时会拒绝。")
+                            Text("C01、D11、D10可用于普通单色、RGB混合与窄带纯通道；LMMSE只用于普通照片。预览和导出使用相同计算。切换时可用局部检查放大镜对照同一区域；检查建议不代表已经检测到伪影。")
                             HStack { Spacer(); Button("知道了") { showHelp = false } }
                         }.font(.callout).fixedSize(horizontal:false,vertical:true).padding(20).frame(width:390)
                     }
@@ -47,18 +48,19 @@ struct DetailComputationControls: View {
             }
             HStack(spacing:8) {
                 Picker("计算方式",selection:$model.recipe.detail_mode) {
-                    Text("频域精细（默认）").tag("spectral")
+                    Text("方向自适应（默认）").tag("directional")
+                    Text("频域精细").tag("spectral")
                     Text("频域限幅").tag("spectral_guard")
-                    Text("方向自适应").tag("directional")
+                    Text("LMMSE 统计重建（实验）").tag("lmmse").disabled(model.recipe.isNarrowband)
                     if model.recipe.usesLegacyDetail { Text("原有模式（旧预设）").tag("legacy") }
                 }.labelsHidden().accessibilityLabel("细节计算模式")
-                ParameterResetButton(parameter:"细节计算模式",defaultDescription:"频域精细（C01）",isDefault:model.recipe.detail_mode == "spectral") {
-                    model.recipe.detail_mode = "spectral"
+                ParameterResetButton(parameter:"细节计算模式",defaultDescription:"方向自适应（D10）",isDefault:model.recipe.detail_mode == "directional") {
+                    model.recipe.detail_mode = "directional"
                 }
             }
             Text(model.recipe.detailModeDescription).font(.caption).foregroundStyle(.secondary)
             if model.recipe.usesLegacyDetail {
-                Text("此预设保留了旧版重建方式。选择上方三种模式后，将按新的计算方式重新生成。")
+                Text("此预设保留了旧版重建方式。选择上方模式后，将按新的计算方式重新生成。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if model.selected != nil {
@@ -189,7 +191,14 @@ struct NarrowbandResponseControls: View {
                     }
                 Spacer(minLength:0)
             }
-            Toggle("启用独立纯通道",isOn:Binding(get:{enabled},set:{model.recipe.response_mode=$0 ? "narrow_green" : "green"}))
+            Toggle("启用独立纯通道",isOn:Binding(get:{enabled},set:{ value in
+                if value && model.recipe.detail_mode == "lmmse" {
+                    model.recipe.detail_mode = "directional"
+                    model.notice = "LMMSE会借助其他颜色采样，不能用于独立纯通道。已切换为方向自适应（D10）。"
+                    ExecutionLogStore.shared.record("narrowband_detail_mode_reset",fields:["from":"lmmse","to":"directional","reason":"independent_same_colour_required"])
+                }
+                model.recipe.response_mode = value ? "narrow_green" : "green"
+            }))
             if enabled {
                 Text(model.selected.map { "仅调整当前照片："+$0.url.lastPathComponent } ?? "请选择照片")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
@@ -208,7 +217,7 @@ struct NarrowbandResponseControls: View {
                     Text("同色重建使用上方“细节计算模式”："+model.recipe.detailModeTitle)
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Text("只保留所选颜色的原始采样，再用同色插值补齐画面；保留全尺寸及原始位置。绿色差异校正不参与。")
+                Text("只保留所选颜色的原始采样，再用同色插值补齐画面；保留全尺寸及原始位置。绿色差异校正与跨颜色LMMSE不参与。")
                     .font(.caption).foregroundStyle(.secondary)
                 Text("三张分别选择对应光源。建议曝光0 EV并保持相同裁切和镜头设置；不自动拉齐亮度。")
                     .font(.caption).foregroundStyle(.secondary)
