@@ -141,6 +141,20 @@ Xcode、编译模块、DMG 打包和独立窄带示例见 [构建说明](docs/BU
 
 [支持页面与收款码原图](docs/SUPPORT.md) · 软件顶部也有“☕ 支持 toMONO”入口。
 
+<!-- toMONO:donors:start -->
+## 捐赠者名单
+
+感谢支持 toMONO 开发与影像研究的朋友。
+
+名单按首次加入顺序累计，随新版本补充，并保留此前的署名。仅展示确认公开的姓名或昵称，不展示金额或支付记录。
+
+- nothing老庄
+
+支持完全自愿，不影响软件功能。也感谢匿名支持、反馈问题和贡献代码的朋友。
+
+[完整名单与更新方式](docs/DONORS.md)
+<!-- toMONO:donors:end -->
+
 ## 许可
 
 项目原创源码按 **GPL-3.0-only** 发布，完整文本见 [LICENSE](LICENSE)。第三方库、数据及其许可独立保留，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 和 [来源说明](docs/PROVENANCE.md)。研究论文的引用不表示论文、权重或数据被重新授权或随仓库提供。
